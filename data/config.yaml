@@ -1,4 +1,4 @@
-name: Jacky Zhao
+name: Jiyeon Seo
 enableToc: true
 openToc: false
 enableLinkPreview: true
@@ -9,7 +9,7 @@ enableCallouts: true
 enableSPA: true
 enableFooter: true
 enableContextualBacklinks: true
-enableRecentNotes: false
+enableRecentNotes: true
 enableGitHubEdit: true
 GitHubLink: https://github.com/jackyzha0/quartz/tree/hugo/content
 search:
@@ -17,12 +17,11 @@ search:
   operandApiKey: "REPLACE-WITH-YOUR-OPERAND-API-KEY"
   operandIndexId: "REPLACE-WITH-YOUR-OPERAND-INDEX-ID"
 description:
-  Host your second brain and digital garden for free. Quartz features extremely fast full-text search,
-  Wikilink support, backlinks, local graph, tags, and link previews.
+  기록을 해봅시다.
 page_title:
-  "🪴 Quartz 3.3"
+  "🪴 Daily gardening"
 links:
   - link_name: Twitter
-    link: https://twitter.com/_jzhao
+    link: https://twitter.com/seojeee
   - link_name: Github
-    link: https://github.com/jackyzha0
+    link: https://github.com/jiyeonseo
