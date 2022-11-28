@@ -108,6 +108,27 @@ tags:
 - account의 storage content의 해시 값.
 - default는 비어 있음.
 
+## Contract address
+- 42자로 구성된 16진수 주소
+	- ex. `0x06012c8cf97bead5deae237070f9587f8e7a266d`
+- Contract가 이더리움 블록체인에 배포될 때 부여된다.
+- 만든 사람의 주소와 해당 주소에서 보낸 트랜잭션의 수([nonce](#nonce))를 통해 만들어진다.
+
+## Validator Keys
+- 작업 증명(proof-of-work)에서 지분 증명(proof-of-stake)로 변경되며 필요해짐
+- BLS(Boneh-Lyn-Shacham) 키는 검증인(validator)를 식별하는데 사용 
+- BLS키는 효율적으로 집계하여 네트워크 합의 도달하는데 필요한 대역폭을 줄일 수 있다. 
+- private key + public key
+
+## Wallets
+- account != wallet
+- account와 인터렉션 할 수 있는 interface 이자 application
+
+## Querying Ether
+- [[Etherscan]] 에서 주소 검색하여 잔액을 확인할 수 있다. 
+
+
+
 ## References
 - Ethereum official website : [https://ethereum.org/ko/what-is-ethereum/](https://ethereum.org/ko/what-is-ethereum/)
 - [Learn Ethereum Blockchain daily and Keep the Knowledge Awake :)](https://medium.com/coinsbench/learn-ethereum-blockchain-daily-and-keep-the-knowledge-awake-day-1-6d482ae67ac7)
