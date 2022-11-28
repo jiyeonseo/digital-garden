@@ -170,6 +170,51 @@ tags:
 	- **maxFeePerGas** : 거래에 대해 지불할 수 있는 최대 가스량 ( baseFeePerGas 와 maxPriorityFeePerGas 포함)
 
 ## Gas
+- 이더리움 네트워크에서 특정 작업을 실행하는데 필요한 계산 노력의 양을 측정하는 단위 
+- 거래를 실행하기 위해 계산 자원 필요 => 각 거래는 수수료가 필요.
+- 이 거래를 성공적으로 수행하기 위한 필요한 수수료 
+- `gasLimit` 와 `maxPriorityFeePerGas` 를 이용하여 validator에게 줄 최대 거래 수수료를 결정한다. 
+
+### 거래 수수료 계산 방법 
+- 이더리움 네트워크 거래 수수료 계산 방식은 [[notes/London upgrade]] 이후로 변경됨.
+- 기존 동작 방식 (런던 업그레이드 전)
+	- `gasLimit` : 21,000 unit, gas price : 200 gwei 인 경우 => Gas units * price = 21,000 * 200 = 4,2000,000 gwei (0.0042 ETH)
+- 이후 동작 방식 (런던 업그레이드 이후)
+	- gasLimit` : 21,000 unit`, **base fee** 10 gwei, tip은 2 gwei 
+	  => 21,000 ( 10 + 2) = 252,000 gwei (0.000252ETH)
+	- validator는 0.000042 ETH 팁을 받고, base fee인 0.00021 ETH는 burn 된다.
+	- `maxFeePerGas` 설정할 수 있다.
+		- refund = 최대 수수료 - ( base fee + priority fee )
+	- 이를 통해 기본료 이상의 과도한 지불을 막는다.
+
+## Block
+- 이전 블록의 hash가 있는 트랜잭션의 배치 
+- hash는 블록 데이터에서 암호화되어 이 링크로 블록들을 연결 
+	- 한번 연결된 hash는 모든 이용자가 알고 있기 때문에 쉽게 변조할 수 없다. 
+
+### 왜 block이 필요한가
+
+### block 작동 방식 
+
+### Proof-of-stake Protocol 
+
+### What's in a block
+- `slot`
+- `proposer_index`
+- `parent_root`
+- `state_root`
+- `body`
+	- `randao_reveal`
+	- `eth1_data`
+	- `graffiti`
+	- `proposer_slashings`
+	- `attester_slashings`
+	- `attestations`
+	- `deposits`
+	- `voluntary_exits`
+	- `sync_aggregate`
+	- `execution_payload`
+	- 
 
 
 ## References
