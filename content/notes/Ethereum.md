@@ -125,7 +125,7 @@ tags:
 - account와 인터렉션 할 수 있는 interface 이자 application
 
 ## Querying Ether
-- [[Etherscan]] 에서 주소 검색하여 잔액을 확인할 수 있다. 
+- [[notes/Etherscan]]에서 주소 검색하여 잔액을 확인할 수 있다. 
 
 ## DApp
 - decentralized application
@@ -170,8 +170,6 @@ tags:
 	- **maxFeePerGas** : 거래에 대해 지불할 수 있는 최대 가스량 ( baseFeePerGas 와 maxPriorityFeePerGas 포함)
 
 ## Gas
-
-
 
 
 ## References

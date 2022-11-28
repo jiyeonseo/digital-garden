@@ -18,7 +18,7 @@ tags:
 
 ![](https://user-images.githubusercontent.com/2231510/204303462-86a6c32d-033c-4052-ac52-c559d0a2c944.png)
 - Details 에서도 동일하게 NFT에 대해 알 수 있다.
-- Contract Address 링크 : NFT Collection contract [[Etherscan]] 페이지로 연결
+- Contract Address 링크 : NFT Collection contract [[notes/Etherscan]] 페이지로 연결
 - Token ID 링크 : NFT Token의 metadata 
 
 ## Etherscan
@@ -36,7 +36,7 @@ tags:
 	  ![](https://user-images.githubusercontent.com/2231510/204311713-6f1ea517-9144-43bc-9add-3e39f0ce9386.png)
 	- `tokenURI` : NFT metadata link 
 	  ![](https://user-images.githubusercontent.com/2231510/204314326-005287a8-b0f2-43d6-a94a-dd5b8c4bac92.png)
-	  - [[IPFS]] 주소
+	  - [[notes/IPFS]] 주소
 	  - `https://ipfs.io/ipfs/{뒤쪽 주소}` 
 		  - 앞부분은 바뀌지 않고 맨 뒤 token ID만 변경된다. 
 	  - [https://ipfs.io/ipfs/QmPMc4tcBsMqLRuCQtPmPe84bpSjrC3Ky7t3JWuHXYB4aS/13](https://ipfs.io/ipfs/QmPMc4tcBsMqLRuCQtPmPe84bpSjrC3Ky7t3JWuHXYB4aS/13)
