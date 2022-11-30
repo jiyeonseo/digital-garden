@@ -10,7 +10,7 @@ enableSPA: true
 enableFooter: true
 enableContextualBacklinks: true
 enableRecentNotes: true
-enableGitHubEdit: true
+enableGitHubEdit: false
 GitHubLink: https://github.com/jiyeonseo/digital-garden/tree/hugo/content
 search:
   enableSemanticSearch: false

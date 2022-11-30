@@ -11,7 +11,7 @@ tags:
 - 중앙 주체의 통제 없이 앱과 조직을 구축하고, 자산을 보유하고, 거래하고 소통할 수 있음
 
 ## EVM
-- Ethereum Virtual Machine
+- [[notes/Ethereum Virtual Machine]]
 - 글로벌 가상 컴퓨터, 모든 참여자들이 코드 실행을 요청 할 수 있고, 코드 실행은 EVM 상태를 변경시킴
 - [https://ethereum.org/ko/developers/docs/evm](https://ethereum.org/ko/developers/docs/evm)
 
