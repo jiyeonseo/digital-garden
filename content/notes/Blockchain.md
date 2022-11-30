@@ -25,3 +25,7 @@ tags:
 ## Cryptocurrency
 - 중앙 기관이 아닌 암호를 사용하여 분산 시스템에서 검증 및 유지되는 디지털 통화
 - crypto-currency 혹은 crypto 라고 불린다.
+
+## References
+- [alchemy Web3 Glossary](https://docs.alchemy.com/docs/web3-glossary)
+- 
