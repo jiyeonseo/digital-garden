@@ -33,3 +33,15 @@ swagger에서도 Authorize가 생긴 것을 볼 수 있다.
 ![](https://user-images.githubusercontent.com/2231510/205088702-dc58cc59-75d9-47d1-8215-2329a673400d.png)
 `openapi.json` 확인하면 `components.securitySchemes` 가 추가 되어있다.
 ![](https://user-images.githubusercontent.com/2231510/205089535-3e12ea04-6082-44ff-93f3-ac7ca1e3a491.png)
+- default값 까지 넣으려면 아래와 같이 `x-default` 를 추가해주면 된다.
+ ```json
+securityDefinitions: {
+     API_KEY: {
+        type: "apiKey",
+        name: "x-api-key",
+        in: "header",
+        "x-default": "demo-api-key",
+	},
+},
+```
+- [swagger authentication spec](https://swagger.io/docs/specification/authentication/) 
