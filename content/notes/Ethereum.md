@@ -188,33 +188,73 @@ tags:
 	- 이를 통해 기본료 이상의 과도한 지불을 막는다.
 
 ## Block
-- 이전 블록의 hash가 있는 트랜잭션의 배치 
+- 트랜잭션을 담고 있다. 
+- 즉, 트랜잭션은 기록이고 블록은 장부다. 
 - hash는 블록 데이터에서 암호화되어 이 링크로 블록들을 연결 
 	- 한번 연결된 hash는 모든 이용자가 알고 있기 때문에 쉽게 변조할 수 없다. 
 
 ### 왜 block이 필요한가
+- 이더리움 네트워크에 잇는 모든 참가자가 동기화 상태를 유지하고 트랜잭션의 정확한 기록을 동의
+- 밸리데이터(validator)들은 랜덤으로 트랜잭션을 블록에 담을 수 있는 권한을 받고 그 트랜잭션을 블록에 담아 또 다른 밸리데이터들에게 공유 
 
 ### block 작동 방식 
+- 트랜잭션 기록 보존을 위해 블록은 반드시 정렬된다
+- 블록이 밸리데이터에 의해 합쳐지고 나면, 네트워크에 모두 전파된다.
+- 블록이 합쳐지고 나면 새로운 벨리데이터를 선택하고 다음 블록을 만든다.
+- 현재 이더리움은 proof-of-stake(POS) 프로토콜로 명시되어있다. 
 
 ### Proof-of-stake Protocol 
+- 지분 증명 
+- 밸리데이터가 되기 위해서는 담보로 32ETH 지불해야한다. 
+- 부정행위가 걸릴 경우, 이 담보에서 사라지게 됨으로 네트워크 보호용으로 사용된다.
+- 모든 [[notes/이더리움 2.0#슬롯 (slot)]]마다 [[notes/Block Proposer]]로 부터 밸리데이터가 무작위로 선택
+- 밸리데이터는 트랜잭션을 묶고, 실행, 새로운 상태(state)를 결정 후 다른 밸리데이터들에게 전달 
+	- 다른 밸리데이터들 : 변경 사항들을 실행해보고, 유효하다고 판단하면 해당 블록을 자체 데이터베이스에 추가 
+- 동일 슬롯에 대해 두개의 충돌 블록이 있을 경우 [fork-choice algorithm](https://github.com/ethereum/annotated-spec/blob/master/phase0/fork-choice.md) 으로 가장 많이 연결된 ETH가 지원하는 블록 선택
 
 ### What's in a block
-- `slot`
-- `proposer_index`
-- `parent_root`
-- `state_root`
+![](https://user-images.githubusercontent.com/2231510/205472611-01a88b46-e4f4-4d97-8907-1d2f095761b3.png)
+- `slot` : 이 블록이 속한 슬롯 
+- `proposer_index` : 블록 제안한 밸리데이터의 ID
+- `parent_root` : 이전 블록 해시
+- `state_root` : 상태 오브젝트의 루트 해시
 - `body`
-	- `randao_reveal`
-	- `eth1_data`
-	- `graffiti`
-	- `proposer_slashings`
-	- `attester_slashings`
-	- `attestations`
-	- `deposits`
-	- `voluntary_exits`
-	- `sync_aggregate`
-	- `execution_payload`
-	- 
+	- `randao_reveal` : 다음 [[notes/Block Proposer]]을 위해 사용될 값 
+	- `eth1_data` : 담보 컨트렉트 정보
+	- `graffiti` : 블록 태그를 위한 임의 데이터
+	- `proposer_slashings` :  잘라낼 밸리데이터 목록
+	- `attester_slashings` : 잘라낼 밸리데이터 목록
+	- `attestations` : 현재 블록을 지원하는 증명 목록
+	- `deposits` : 담보 컨트랙트를 위한 새로운 담보 리스트 
+	- `voluntary_exits` : 네트워크 내 밸리데이터 목록
+	- `sync_aggregate` : light client에 전달하는 밸리데이터의 subset
+	- `execution_payload` : 실행 client로 부터의 트랜잭션
+
+### Block Time
+- 블록을 분리하는 시간
+- 이더리움에서 시간은 슬롯([[notes/이더리움 2.0#슬롯 (slot)]] = 12초
+- 모든 밸리데이터가 온라인 상태고 완전히 동작한다고 가정했을 때, 모든 슬롯에 블록이 있다. -> 즉, 블록 시간은 **12초** 
+- 하지만, 밸리데이터가 오프라인일수도 있어서, 슬롯이 빌 수도 있음. 
+
+### Block Size
+- 각 블록의 목표 사이즈는 1500만 가스.
+- 하지만 네트워크 수요에 따라 증가, 감소가 가능하여 최대 3000만 가스(목표의 2배)까지 늘어날 수 있다.
+- 블록 내 모든 트랜잭션에서 지출되는 가스피의 총량은 블록 가스 한도보다 작아야 한다.
+	- 블록이 임의로 커져버리지 않게 하기위한 장치
+	- 블록이 너무 커지면 전체 노드의 리소스와 속도 요구사항으로 인해 네트워크를 따라갈 수 없게 될 수 있음
+
+### Base fee
+- 모든 블록에는 base fee가 있어 예비 가격 역할을 함
+- 블록에 들어가려면 이 base fee 보다는 커야 함
+- 각각의 블록마다 독립적으로 계산됨. 
+- 이전 블록에 의해 결정됨으로 사용자는 fee를 예측할 수 있음
+- 블록이 채굴될때마다 연소(burned)된다. 
+
+### Priority fee (tips)
+- 
+
+### Max fee
+
 
 
 ## References
