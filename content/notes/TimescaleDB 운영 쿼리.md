@@ -4,6 +4,10 @@ tags:
 - TimescaleDB
 ---
 ---
+## Timescale DB Version 확인
+```sql
+SELECT extversion FROM pg_extension where extname = 'timescaledb';
+```
 
 ## Hypertable 만들기
 ```sql
