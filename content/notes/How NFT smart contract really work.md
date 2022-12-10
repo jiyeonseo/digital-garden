@@ -66,7 +66,7 @@ tags:
   ![](https://user-images.githubusercontent.com/2231510/204322362-d41719e9-015d-403f-91e0-8bc9986dfd42.png)
   staking contract 
   ![](https://user-images.githubusercontent.com/2231510/204323453-a5c3738a-c8d6-45cd-a02b-40523d298f07.png)
-  `transferFrom` : [[notes/erc-20]] standard function
+  `transferFrom` : [[notes/ERC-20]] standard function
 	  - `tokenOwner` 로 부터 이 `address` 에게 NFT를 보내겠다. 
 - unstaking
   ![](https://user-images.githubusercontent.com/2231510/204324932-81b03754-0647-4039-9982-b511ff4bca45.png)
