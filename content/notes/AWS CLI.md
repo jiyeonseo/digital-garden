@@ -9,7 +9,7 @@ tags:
 `aws configure`로 구성한 credential 확인하려면 아래와 같이 할 수 있다.
 
 ```sh
-vi ~/.aws/credential
+vi ~/.aws/credentials
 
 [default]
 aws_access_key_id={ACCESS_KEY}

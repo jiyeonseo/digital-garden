@@ -33,7 +33,7 @@ curl -sSL https://install.python-poetry.org | python3 -
 poetry new new-poetry-repository
 cd new-poetry-repository
 ```
-들어가보면 다음과 같은 프로젝트 구조로 되어있다. ([[notes/Tree]] 를 사용)
+들어가보면 다음과 같은 프로젝트 구조로 되어있다. ([[notes/Tree 명령어]] 를 사용)
 ```
 new-poetry-repository/
 ├── README.md

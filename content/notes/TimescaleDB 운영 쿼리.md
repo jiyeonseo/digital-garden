@@ -109,3 +109,48 @@ SELECT
   END AS log_delay;
 ```
 
+## Job 
+- retention, continuous aggregate 등 주기적으로 작업되는 policy들은 모두 job으로 등록되어있다. 
+- doc : [Actions and automation](https://docs.timescale.com/api/latest/actions/)
+
+### 등록된 job 확인
+```sql
+SELECT *
+FROM timescaledb_information.jobs j
+```
+
+```markdown
+|job_id|application_name|schedule_interval|max_runtime|max_retries|retry_period|proc_schema|proc_name|owner|scheduled|config|next_start|hypertable_schema|hypertable_name|check_schema|check_name|
+
+|------|----------------|-----------------|-----------|-----------|------------|-----------|---------|-----|---------|------|----------|-----------------|---------------|------------|----------|
+
+|1|Telemetry Reporter [1]|24:00:00|00:01:40|-1|01:00:00|_timescaledb_internal|policy_telemetry|postgres|true||2022-12-18 08:02:08.220 +0900|||||
+
+|1001|Refresh Continuous Aggregate Policy [1001]|01:00:00|00:00:00|-1|01:00:00|_timescaledb_internal|policy_refresh_continuous_aggregate|nftbankci|true|{"end_offset": "01:00:00", "start_offset": "3 days", "mat_hypertable_id": 7}|2022-12-17 12:48:56.433 +0900|_timescaledb_internal|_materialized_hypertable_7|_timescaledb_internal|policy_refresh_continuous_aggregate_check|
+
+|1003|Compression Policy [1003]|35 days|00:00:00|-1|01:00:00|_timescaledb_internal|policy_compression|nftbankci|true|{"hypertable_id": 7, "compress_after": "5 days"}|2023-01-05 20:39:47.486 +0900|_timescaledb_internal|_materialized_hypertable_7|_timescaledb_internal|policy_compression_check|
+
+|1011|Retention Policy [1011]|1 day|00:05:00|-1|00:05:00|_timescaledb_internal|policy_retention|nftbankci|true|{"drop_after": "90 days", "hypertable_id": 20}|2022-12-17 16:55:15.014 +0900|_timescaledb_internal|_materialized_hypertable_20|_timescaledb_internal|policy_retention_check|
+
+```
+
+- `Refresh Continuous Aggregate Policy`
+	- continuous aggregate 내가 지정한 테이블 이름으로 보이지 않는다. 내부적으로는 internal table로 되어있다. 
+	```sql
+	   select * from _timescaledb_internal._materialized_hypertable_20
+	```
+	
+- `Compression Policy`
+	- 일정 기간이 지난 데이터는 압축한다. 
+	- read만 가능 update, delete를 위해서는 uncompression을 따로 해주어야 한다.
+	- doc : [Compression](https://docs.timescale.com/api/latest/compression/)
+- `Retention Policy`
+	- 일정 기간이 지난 후에는 자동 삭제한다. 
+	- doc : [Data Retention](https://docs.timescale.com/api/latest/data-retention/)
+
+
+### job 삭제
+```sql
+SELECT delete_job(<job id>);
+SELECT delete_job(1000);
+```
