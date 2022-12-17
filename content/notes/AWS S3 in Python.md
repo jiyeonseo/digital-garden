@@ -39,7 +39,7 @@ def create_presigned_url(bucket_name, object_name, expiration=3600):
         return None
 
     # The response contains the presigned URL
-    # 
+    # https://{bucket_name}.s3.amazonaws.com/{key}?AWSAccessKeyId={aws_access_key}&Signature={signature}&Expires={expire_unixtimestamp}
     return response
 ```
 
