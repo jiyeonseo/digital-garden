@@ -98,6 +98,10 @@ poetry env list
 
 poetry env use python3
 ```
+지금 사용중인 virtual env 위치 확인하기 
+```sh
+poetry show -v
+```
 
 
 ## References
