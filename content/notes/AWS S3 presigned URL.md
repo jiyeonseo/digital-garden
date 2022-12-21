@@ -1,17 +1,18 @@
 ---
-title: "AWS S3 in Python"
+title: "AWS S3 presigned URL 사용 방법"
 tags:
 - aws
-- python
+- s3
 ---
-
-## generate_presigned_url 
 - S3는 기본적으로 private이지만, presigned_url을 통해 권한이 없는 사람에게도 object를 받을 수 있도록 임시로 허용할 수 있다. 
-- 만료시간을 주어 access를 조절할 수 있다. 
+-  만료시간을 주어 access를 조절할 수 있다. 
 - presigned_url 만들 시에는 만든 **사용자의 권한**에 따라 제한된다.
 	- IAM instance profile : 최대 6시간 사용 가능한 presigned_url 생성 가능 
 	- AWS Security Token Service : 최대 36시간 
 	- IAM user : 최대 7일 (AWS Signature Version 4 사용시)
+- 만료 시간 전까지는 계속 사용할 수 있다. 
+## `generate_presigned_url` 
+- `boto3` 를 이용하여 쉽게 presigned URL을 만들 수 있다. 
 
 ```python
 import logging
@@ -39,12 +40,28 @@ def create_presigned_url(bucket_name, object_name, expiration=3600):
         return None
 
     # The response contains the presigned URL
-    # https://{bucket_name}.s3.amazonaws.com/{key}?AWSAccessKeyId={aws_access_key}&Signature={signature}&Expires={expire_unixtimestamp}
     return response
 ```
 
+presigned URL을 통해서는 GET, PUT 모두 가능한데 이때 client method를 지정하여 내려줄 수 있다. 
+- GET : `get_object`
+- PUT : `put_object`
+``
+`get_object` 용으로 반환된 URL은 다음과 같은 모양으로 생겼다. 
+```
+https://{bucket_name}.s3.amazonaws.com/{key}?AWSAccessKeyId={aws_access_key}&Signature={signature}&Expires={expire_unixtimestamp}
+```
 
-## Sample Code 
+
+### 동작 방식 
+![](https://user-images.githubusercontent.com/2231510/208320571-2ef6f2c5-c6db-413a-b171-879d8bed1b78.png)
+(출처 : https://insecurity.blog/2021/03/06/securing-amazon-s3-presigned-urls/)
+
+안전하게 사용하기 위해서는 
+- 해당 S3 버킷의 sever access log 활성화
+- 파일 이름은 예측하기 어렵도록 UUID를 사용한다.
+
+## S3 Client Sample Code with boto3 in Python
 ```python
 import boto3
 
@@ -167,6 +184,11 @@ class S3Client():
         )
 ```
 
+
 ## Preferences
+- [미리 서명된 URL을 생성하여 객체 업로드](https://docs.aws.amazon.com/ko_kr/AmazonS3/latest/userguide/PresignedUrlUploadObject.html)
+- [미리 서명된 URL 기능 제한](https://docs.aws.amazon.com/ko_kr/AmazonS3/latest/userguide/using-presigned-url.html#PresignedUrlUploadObject-LimitCapabilities)
 - [Example: An S3 proxy client written in Python](https://gist.github.com/tamouse/b5c725082743f663fb531fa4add4b189)
 - [Using presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html)
+- [Securing your Amazon AWS S3 presigned URLs, tips and tricks](https://insecurity.blog/2021/03/06/securing-amazon-s3-presigned-urls/)
+- [S3 pre-signed URL 한번만 사용하기](https://mygumi.tistory.com/380)
