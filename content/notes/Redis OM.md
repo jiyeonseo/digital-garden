@@ -58,5 +58,27 @@ assert Customer.get(andrew.pk) == andrew
 - 객체 생성시 바로 반환되며 Redis와의 통신은 따로 필요하지 않다. 
 - 이렇게 할 수 있는 것은 [[notes/Universally Unique Lexicographically Sortable Identifiers]] 스펙을 따르고 있기 때문이다. 
 
+### Data validation with Pydantic
+- 기존 레디스에서는 데이터 스키마를 강제하지 않고 있지만 Redis OM의 Pydantic model을 이용하면 다른 RDB에서와 같이 validation을 체크 할 수 있다. 
+
+```py
+try:
+	Customer(
+		first_name="Andrew",
+		last_name="Brookins",
+		email="Not an email address!",
+		join_date=datetime.date.today(),
+		age=38,
+		bio="Python developer, works at Redis, Inc."
+	)
+except ValidationError as e:
+	print(e)
+	"""
+	pydantic.error_wrappers.ValidationError: 1 validation error for Customer
+	email
+	value is not a valid email address (type=value_error.email)
+	"""
+```
+
 ## References
 - [Introducing Redis OM for python](https://redis.com/blog/introducing-redis-om-for-python/)
