@@ -1,5 +1,5 @@
 ---
-title: "Redis OM"
+title: "Redis OM Python"
 tags:
 - redis
 ---
@@ -38,13 +38,9 @@ Migrator(redis).run()
 
 ```py
 import datetime
-
 from typing import Optional
-
 from pydantic import EmailStr
-
 from redis_om import HashModel
-
 class Customer(HashModel):
 	first_name: str
 	last_name: str
@@ -53,9 +49,7 @@ class Customer(HashModel):
 	age: int
 	bio: Optional[str]
 
-# andrew라는 Customer 객체 생성
-
-andrew = Customer(
+andrew = Customer( # andrew라는 Customer 객체 생성
 	first_name="Andrew",
 	last_name="Brookins",
 	email="andrew.brookins@example.com",
@@ -144,8 +138,6 @@ class Customer(HashModel):
 
 await Customer.all_pks()
 ```
--
-
 
 ### Embedded model
 - `HashModel`에서는 List, Set, Hash와 같은 다른 타입은 사용할 수 없다
@@ -153,7 +145,6 @@ await Customer.all_pks()
 ```py
 from redis_om import EmbeddedJsonModel, JsonModel, Field
 
-  
 class Address(EmbeddedJsonModel):
 	address_line_1: str
 	address_line_2: Optional[str]
