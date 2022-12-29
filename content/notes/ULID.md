@@ -4,6 +4,7 @@ tags:
 - UUID
 - identifier
 ---
+- Universally Unique Lexicographically Sortable Identifiers
 - 128 bits 이며 UUID와 호환 가능
 - 매 밀리세컨드마다 1.21e+24 유니크값 생성 가능
 - 시간을 나타내는 앞 48bits와 임의값 80bits로 구성된 값. 
