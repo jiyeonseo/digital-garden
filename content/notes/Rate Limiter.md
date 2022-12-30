@@ -31,7 +31,8 @@ title: "처리율 제한 장치 Rate Limitter"
 
 ### 1) 시간당 처리율 
 - RPS, PRM 등 시간 내 요청 수 제한
-- 
+
+
 ### 2) Compute Unit 
 - API endpoint 마다 정보를 쿼리하는데 필요한 계산에 따라, 각 API 요청에 대한 가중치를 부여하는 방법. 이 단위를 Compute Unit 줄여 CU라고 부른다. 
 - CUPS (Compute Unit Per Second) 
