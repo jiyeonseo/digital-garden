@@ -5,7 +5,7 @@ tags:
 - ethereum
 ---
 
-- 런던 [[notes/하드포크]]
+- 런던 [[notes/hard fork]]
 - 2021년 8월 5일 
 - 수수료 구조 개선 및 공급량 조절 등 
 
