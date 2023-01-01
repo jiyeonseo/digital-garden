@@ -1,14 +1,15 @@
 ---
-title: "DB Connection Pool이 필요한 이유"
+title: "DB Connection Pool이 필요한 이유"
 tags:
 - database
 ---
+
 ## DB Connection
 어플리케이션이 DB server와의 통신을 위한 연결로 SQL 문을 보내고 그 결과값을 받기 위해 사용한다. 데이터베이스 서버도 앱서버와 같이 특정 포트 (예를 들어, MySQL 데이터베이스 서버는 기본 `3306`)로 떠 있으며, 이 서버와 백엔드 서버가 **TCP-IP protocol**로 Connection을 맺는다. 이때, 필요에 따라 user name, password와 같은 credentials 가 필요할 수도 있다.
 
 DB Connection을 맺기 위해서는 DB Host, Port, database name, driver, user name, password 등이 필요하다. 
 
-```
+```yaml
 db_url      = jdbc:mysql://HOST/DATABASE  
 db_driver   = com.mysql.jdbc.Driver  
 db_username = USERNAME  
