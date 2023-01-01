@@ -9,6 +9,7 @@ tags:
 ## Code 
 ```python 
 import sys
+import pyttsx3
 import PyPDF2
 
 # python main.py ./test.pdf 인자로 읽을 파일 받기
