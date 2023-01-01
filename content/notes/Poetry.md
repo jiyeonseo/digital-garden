@@ -92,11 +92,33 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 ```
 
+### `poetry check`
+ - `pyproject.toml` 파일 validation
+
+### `poetry install`
+ - `pyproject.toml` 의 의존성 로컬에 설치하기 
+```sh
+poetry install --no-dev # dev-dependencies 빼고 
+```
+### `poetry update`
+- 의존성 모두 업데이트 하기 
+- `poetry.lock`을 삭제하고 새로 `poetry install` 하는 것과 동일한 동작
+
+## poetry.lock
+- 설치된 패키지의 정확한 버전을 명시하여 어떠한 특정 버전이 이 프로젝트에서 사용되고 있는지 lock 
+- 여러 사람과 협업시 동일한 버전의 의존성을 가질 수 있게 됨
+- 만약 `poetry.lock` 이 없다면 `pyproject.toml` 에 명시된 내용에서 가장 최신 버전을 받게 된다.
+
 ## Virtual Environment
 ```sh
+# 설정 가능한 python 환경들 확인하기 
 poetry env list
 
+# venv로 사용할 python 환경
 poetry env use python3
+
+# venv 사용하여 python 사용하기 
+poetry run python ./main.py
 ```
 지금 사용중인 virtual env 위치 확인하기 
 ```sh

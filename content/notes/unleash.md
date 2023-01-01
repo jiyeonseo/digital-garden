@@ -9,6 +9,7 @@ tags:
 - Client (Server Side) / Frontend (Web+Mobile) 각각의 SDK를 잘 지원하고 있어 여러 방면에서 사용하기 좋다. 
 ![](https://docs.getunleash.io/assets/images/unleash-architecture-40c7293e777a7bea0df4edeeef8a6bf4.svg)
 - Enterprise와 opensource 둘 다 제공하고 있어 입맛에 알맞게 사용할 수 있다. 
+	- Managed 는 $80/Month
 	- [Dockerfile](https://docs.getunleash.io/reference/deploy/getting-started)
 	- [Helm chart](https://github.com/unleash/helm-charts/)
 	
