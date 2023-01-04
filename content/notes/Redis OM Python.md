@@ -147,6 +147,8 @@ except ValidationError as e:
 
 ## Query expressions
 - ORM의 또다른 강력한 무기는 API를 이용한 쿼리이다. Redis OM 역시 [RediSearch](https://redis.com/modules/redis-search/) 를 이용하여 Redis에서도 DB처럼 쿼리 및 인덱싱을 할 수 있도록 해준다. 
+- AWS memoryDB는 RediSearch가 설치가 안되어있어 아래 기능을 사용할 수 없다.  
+	- AWS에서 사용하려면 Redis에서 직접 제공하고 있는 [Redis Enterprise Cloud](https://aws.amazon.com/marketplace/pp/prodview-mwscixe4ujhkq) 를 사용해야 한다.
 ```py
 from redis_om import get_redis_connection
 
