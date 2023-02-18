@@ -1,0 +1,292 @@
+<!doctype html><html lang=en><head><meta charset=utf-8><meta name=description content="[[notes/memorydb]] 를 node 2개(master + replica)로, client는 redis-py cluster로 연결하고 사용하고 있었다. Memory DB는 Redis Cluster로 구성되어있기 때문에 하나의 node가 내려가더라도 대기중인 replica가 올라가기 때문에 내구성이 뛰어나고, 모든 노드에 똑같이 복사가 되기 때문에 데이터의 유실도 없다."><title>[redis-py Cluster] Redis Cluster cannot be connected. Please provide at least one reachable node</title><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" type=image/png href=https://jiyeonseo.github.io/digital-garden//icon.png><link href=https://jiyeonseo.github.io/digital-garden/styles.706bb6073ba85d26809f9096dae23a6b.min.css rel=stylesheet><link href=https://jiyeonseo.github.io/digital-garden/styles/_light_syntax.86a48a52faebeaaf42158b72922b1c90.min.css rel=stylesheet id=theme-link><script src=https://jiyeonseo.github.io/digital-garden/js/darkmode.c4cfc44be7d7552270952c408c57bff2.min.js></script>
+<script src=https://jiyeonseo.github.io/digital-garden/js/util.fa8e74b4065b97e6980a72cc472e436f.min.js></script>
+<link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css integrity=sha384-R4558gYOUz8mP9YWpZJjofhk+zx0AS11p36HnD2ZKj/6JR5z27gSSULCNHIRReVs crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.js integrity=sha384-z1fJDqw8ZApjGO3/unPWUPsIymfsJmyrDVWC8Tv/a1HeOtGmkwNd/7xUS0Xcnvsx crossorigin=anonymous></script>
+<script defer src=https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/contrib/auto-render.min.js integrity=sha384-+XBljXPPiv+OzfbB3cVmLHf4hdUFHlWNZN5spNQ7rmHTXpd7WvJum6fIACpNNfIR crossorigin=anonymous></script>
+<script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/contrib/copy-tex.min.js integrity=sha384-ww/583aHhxWkz5DEVn6OKtNiIaLi2iBRNZXfJRiY1Ai7tnJ9UXpEsyvOITVpTl4A crossorigin=anonymous></script>
+<script src=https://unpkg.com/@floating-ui/core@0.7.3></script>
+<script src=https://unpkg.com/@floating-ui/dom@0.5.4></script>
+<script src=https://jiyeonseo.github.io/digital-garden/js/popover.9b72b70bd35617d0635e9d15463662b2.min.js></script>
+<script src=https://jiyeonseo.github.io/digital-garden/js/code-title.b35124ad8db0ba37162b886afb711cbc.min.js></script>
+<script src=https://jiyeonseo.github.io/digital-garden/js/clipboard.c20857734e53a3fb733b7443879efa61.min.js></script>
+<script src=https://jiyeonseo.github.io/digital-garden/js/callouts.7723cac461d613d118ee8bb8216b9838.min.js></script>
+<script>const SEARCH_ENABLED=!1,PRODUCTION=!0,BASE_URL="https://jiyeonseo.github.io/digital-garden/",fetchData=Promise.all([fetch("https://jiyeonseo.github.io/digital-garden/indices/linkIndex.53262f132047b03610f9618af2be7172.min.json").then(e=>e.json()).then(e=>({index:e.index,links:e.links})),fetch("https://jiyeonseo.github.io/digital-garden/indices/contentIndex.2077f19016f3ce84b3160d01becae66e.min.json").then(e=>e.json())]).then(([{index:e,links:t},n])=>({index:e,links:t,content:n})),render=()=>{const e=new URL(BASE_URL),t=e.pathname,n=window.location.pathname,s=t==n;addCopyButtons(),addTitleToCodeBlocks(),addCollapsibleCallouts(),initPopover("https://jiyeonseo.github.io/digital-garden",!0,!0);const o=document.getElementById("footer");if(o){const e=document.getElementById("graph-container");if(!e)return requestAnimationFrame(render);e.textContent="";const t=s&&!1;drawGraph("https://jiyeonseo.github.io/digital-garden",t,[{"/moc":"#4388cc"}],t?{centerForce:1,depth:-1,enableDrag:!0,enableLegend:!1,enableZoom:!0,fontSize:.5,linkDistance:1,opacityScale:3,repelForce:1,scale:1.4}:{centerForce:1,depth:1,enableDrag:!0,enableLegend:!1,enableZoom:!0,fontSize:.6,linkDistance:1,opacityScale:3,repelForce:2,scale:1.2})}},init=(e=document)=>{addCopyButtons(),addTitleToCodeBlocks(),renderMathInElement(e.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}],macros:{'’':"'"},throwOnError:!1})}</script><script type=module>
+    import { attachSPARouting } from "https:\/\/jiyeonseo.github.io\/digital-garden\/js\/router.9d4974281069e9ebb189f642ae1e3ca2.min.js"
+    attachSPARouting(init, render)
+  </script></head><script async src="https://www.googletagmanager.com/gtag/js?id=G-T5QZV24KX4"></script>
+<script>var doNotTrack=!1;if(!doNotTrack){window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-T5QZV24KX4",{anonymize_ip:!1})}</script><body><div id=search-container><div id=search-space><input autocomplete=off id=search-bar name=search type=text aria-label=Search placeholder="Search for something..."><div id=results-container></div></div></div><script src=https://cdn.jsdelivr.net/npm/flexsearch@0.7.21/dist/flexsearch.bundle.js integrity="sha256-i3A0NZGkhsKjVMzFxv3ksk0DZh3aXqu0l49Bbh0MdjE=" crossorigin=anonymous defer></script>
+<script defer src=https://jiyeonseo.github.io/digital-garden/js/full-text-search.51f0b1753e9b30839d053f8a98cc20d1.min.js></script><div class=singlePage><header><h1 id=page-title><a href=https://jiyeonseo.github.io/digital-garden/>🪴 Daily gardening</a></h1><div class=spacer></div><div id=search-icon><p>Search</p><svg tabindex="0" aria-labelledby="title desc" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.9 19.7"><title id="title">Search Icon</title><desc id="desc">Icon to open search</desc><g class="search-path" fill="none"><path stroke-linecap="square" d="M18.5 18.3l-5.4-5.4"/><circle cx="8" cy="8" r="7"/></g></svg></div><div class=darkmode><input class=toggle id=darkmode-toggle type=checkbox tabindex=-1>
+<label id=toggle-label-light for=darkmode-toggle tabindex=-1><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="dayIcon" viewBox="0 0 35 35" style="enable-background:new 0 0 35 35"><title>Light Mode</title><path d="M6 17.5C6 16.672 5.328 16 4.5 16h-3C.672 16 0 16.672.0 17.5S.672 19 1.5 19h3C5.328 19 6 18.328 6 17.5zM7.5 26c-.414.0-.789.168-1.061.439l-2 2C4.168 28.711 4 29.086 4 29.5 4 30.328 4.671 31 5.5 31c.414.0.789-.168 1.06-.44l2-2C8.832 28.289 9 27.914 9 27.5 9 26.672 8.329 26 7.5 26zm10-20C18.329 6 19 5.328 19 4.5v-3C19 .672 18.329.0 17.5.0S16 .672 16 1.5v3C16 5.328 16.671 6 17.5 6zm10 3c.414.0.789-.168 1.06-.439l2-2C30.832 6.289 31 5.914 31 5.5 31 4.672 30.329 4 29.5 4c-.414.0-.789.168-1.061.44l-2 2C26.168 6.711 26 7.086 26 7.5 26 8.328 26.671 9 27.5 9zM6.439 8.561C6.711 8.832 7.086 9 7.5 9 8.328 9 9 8.328 9 7.5c0-.414-.168-.789-.439-1.061l-2-2C6.289 4.168 5.914 4 5.5 4 4.672 4 4 4.672 4 5.5c0 .414.168.789.439 1.06l2 2.001zM33.5 16h-3c-.828.0-1.5.672-1.5 1.5s.672 1.5 1.5 1.5h3c.828.0 1.5-.672 1.5-1.5S34.328 16 33.5 16zM28.561 26.439C28.289 26.168 27.914 26 27.5 26c-.828.0-1.5.672-1.5 1.5.0.414.168.789.439 1.06l2 2C28.711 30.832 29.086 31 29.5 31c.828.0 1.5-.672 1.5-1.5.0-.414-.168-.789-.439-1.061l-2-2zM17.5 29c-.829.0-1.5.672-1.5 1.5v3c0 .828.671 1.5 1.5 1.5s1.5-.672 1.5-1.5v-3C19 29.672 18.329 29 17.5 29zm0-22C11.71 7 7 11.71 7 17.5S11.71 28 17.5 28 28 23.29 28 17.5 23.29 7 17.5 7zm0 18c-4.136.0-7.5-3.364-7.5-7.5s3.364-7.5 7.5-7.5 7.5 3.364 7.5 7.5S21.636 25 17.5 25z"/></svg></label><label id=toggle-label-dark for=darkmode-toggle tabindex=-1><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="nightIcon" viewBox="0 0 100 100" style="enable-background='new 0 0 100 100'"><title>Dark Mode</title><path d="M96.76 66.458c-.853-.852-2.15-1.064-3.23-.534-6.063 2.991-12.858 4.571-19.655 4.571C62.022 70.495 50.88 65.88 42.5 57.5 29.043 44.043 25.658 23.536 34.076 6.47c.532-1.08.318-2.379-.534-3.23-.851-.852-2.15-1.064-3.23-.534-4.918 2.427-9.375 5.619-13.246 9.491-9.447 9.447-14.65 22.008-14.65 35.369.0 13.36 5.203 25.921 14.65 35.368s22.008 14.65 35.368 14.65c13.361.0 25.921-5.203 35.369-14.65 3.872-3.871 7.064-8.328 9.491-13.246C97.826 68.608 97.611 67.309 96.76 66.458z"/></svg></label></div></header><article><h1>[redis-py Cluster] Redis Cluster cannot be connected. Please provide at least one reachable node</h1><p class=meta>Last updated
+Feb 18, 2023</p><ul class=tags><li><a href=https://jiyeonseo.github.io/digital-garden/tags/redis/>Redis</a></li></ul><aside class=mainTOC><details><summary>Table of Contents</summary><nav id=TableOfContents><ol><li><a href=#memorydb-failover-테스트하기>MemoryDB Failover 테스트하기</a><ol><li><a href=#1-aws-console>1) AWS Console</a></li><li><a href=#2-aws-cli>2) AWS CLI</a></li><li><a href=#유의-사항>유의 사항</a></li></ol></li><li><a href=#redis-py-확인하기>redis-py 확인하기</a><ol><li><a href=#1--reinitialize_steps-설정>1) <code>reinitialize_steps</code> 설정</a></li><li><a href=#2-nodemanager-이슈>2) <code>NodeManager</code> 이슈</a></li></ol></li></ol></nav></details></aside><p><a href=/digital-garden/notes/memorydb rel=noopener class=internal-link data-src=/digital-garden/notes/memorydb>memorydb</a> 를 node 2개(master + replica)로, client는
+<a href=https://github.com/redis/redis-py rel=noopener>redis-py</a> cluster로 연결하고 사용하고 있었다. Memory DB는 Redis Cluster로 구성되어있기 때문에 하나의 node가 내려가더라도 대기중인 replica가 올라가기 때문에 내구성이 뛰어나고, 모든 노드에 똑같이 복사가 되기 때문에 데이터의 유실도 없다.</p><p>redis-py 는 아래와 같이 client 설정을 해주었다.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-py data-lang=py><span class=line><span class=cl><span class=kn>from</span> <span class=nn>redis.asyncio.cluster</span> <span class=kn>import</span> <span class=n>RedisCluster</span> <span class=k>as</span> <span class=n>AsyncRedisCluster</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=o>...</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=n>REDIS_CONNECTION_PARAMS</span> <span class=o>=</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>	<span class=s2>&#34;password&#34;</span><span class=p>:</span> <span class=n>app_settings</span><span class=o>.</span><span class=n>redis_password</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=s2>&#34;username&#34;</span><span class=p>:</span> <span class=n>app_settings</span><span class=o>.</span><span class=n>redis_user</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=s2>&#34;host&#34;</span><span class=p>:</span> <span class=n>app_settings</span><span class=o>.</span><span class=n>redis_endpoint</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=s2>&#34;port&#34;</span><span class=p>:</span> <span class=n>app_settings</span><span class=o>.</span><span class=n>redis_port</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=s2>&#34;encoding&#34;</span><span class=p>:</span> <span class=s2>&#34;utf-8&#34;</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=s2>&#34;ssl&#34;</span><span class=p>:</span> <span class=kc>True</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=s2>&#34;decode_responses&#34;</span><span class=p>:</span> <span class=kc>True</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=s2>&#34;require_full_coverage&#34;</span><span class=p>:</span> <span class=kc>False</span><span class=p>,</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=bp>self</span><span class=o>.</span><span class=n>_redis_cluster</span> <span class=o>=</span> <span class=n>AsyncRedisCluster</span><span class=p>(</span><span class=o>**</span><span class=n>REDIS_CONNECTION_PARAMS</span><span class=p>)</span>
+</span></span><span class=line><span class=cl><span class=o>...</span>
+</span></span></code></pre></td></tr></table></div></div><p>그러던 어느날, Client쪽에서 다음과 같은 에러가 떨어졌다.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>Redis Cluster cannot be connected. Please provide at least one reachable node: None
+</span></span></code></pre></td></tr></table></div></div><p>즉, 붙을 수 있는 node가 없다는 에러다. 확인한 결과 분명 Momory DB는 떠 있는 상태였다. 다만 이벤트를 확인해 보았을 때, 어떠한 이유로 master node가 내려간 것으로 보인다.</p><p><img src=https://user-images.githubusercontent.com/2231510/218296467-ab03ff37-b8c3-4108-a684-27c882de628e.png width=auto alt=unnamed__3_></p><ul><li>master node 였건 <code>*-0001-002</code> 가 어떠한 이유로 Failover되어 replica node 였던 <code>*-0001-001</code> 가 master로 승격되었고,</li><li>바로 이어서 다시 <code>*-0001-001</code>에 Failover 되며 다시 <code>*-0001-002</code> 가 master로 승격되었다.</li></ul><p>이후, 위 에러가 발생하였다. 분명 node가 내려가더라도 서비스 장애 없이 잘 되어야 할 것 같은데 node를 찾지 못했다.</p><a href=#memorydb-failover-테스트하기><h2 id=memorydb-failover-테스트하기><span class=hanchor arialabel=Anchor># </span>MemoryDB Failover 테스트하기</h2></a><p>우선 현상을 재현해보기 위해 Memory DB의 master node를 일부러 내리는 테스트를 해보았다. 두가지 방법으로 master node를 내려볼 수 있다.</p><a href=#1-aws-console><h3 id=1-aws-console><span class=hanchor arialabel=Anchor># </span>1) AWS Console</h3></a><p><img src=https://user-images.githubusercontent.com/2231510/218296636-63f167a0-a7d6-4024-b4b4-ae147f0407d7.png width=auto alt></p><ul><li>AWS MomoryDB Console -> 테스트할 클러스터 선택 > 상단 &ldquo;프라이머리 장애 조치&rdquo;</li><li>제대로 실행 되면 왼쪽 &ldquo;Events&rdquo; 탭에 장애 조치 시작인 &ldquo;FailoverSharedAPI Called&rdquo; 와 완료 &ldquo;Recovery completed&rdquo; 되는 이벤트들을 확인 할 수 있다.</li></ul><a href=#2-aws-cli><h3 id=2-aws-cli><span class=hanchor arialabel=Anchor># </span>2) AWS CLI</h3></a><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl># Linux, macOS, Unix
+</span></span><span class=line><span class=cl>aws memorydb failover-shard \  
+</span></span><span class=line><span class=cl>   --cluster-name my-cluster \  
+</span></span><span class=line><span class=cl>   --shard-name 0001
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl># Windows
+</span></span><span class=line><span class=cl>aws memorydb failover-shard ^  
+</span></span><span class=line><span class=cl>   --cluster-name my-cluster ^  
+</span></span><span class=line><span class=cl>   --shard-name 0001
+</span></span></code></pre></td></tr></table></div></div><p>위와 같이 요청하면, 다음과 같은 응답값이 온다.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>{  
+</span></span><span class=line><span class=cl>     &#34;Events&#34;: [  
+</span></span><span class=line><span class=cl>        {  
+</span></span><span class=line><span class=cl>             &#34;SourceName&#34;: &#34;my-cluster&#34;,  
+</span></span><span class=line><span class=cl>             &#34;SourceType&#34;: &#34;cluster&#34;,  
+</span></span><span class=line><span class=cl>             &#34;Message&#34;: &#34;Failover to replica node my-cluster-0001-002 completed&#34;,  
+</span></span><span class=line><span class=cl>             &#34;Date&#34;: &#34;2021-08-22T12:39:37.568000-07:00&#34;  
+</span></span><span class=line><span class=cl>         },  
+</span></span><span class=line><span class=cl>         {  
+</span></span><span class=line><span class=cl>             &#34;SourceName&#34;: &#34;my-cluster&#34;,  
+</span></span><span class=line><span class=cl>             &#34;SourceType&#34;: &#34;cluster&#34;,  
+</span></span><span class=line><span class=cl>             &#34;Message&#34;: &#34;Starting failover for shard 0001&#34;,  
+</span></span><span class=line><span class=cl>             &#34;Date&#34;: &#34;2021-08-22T12:39:10.173000-07:00&#34;  
+</span></span><span class=line><span class=cl>         }  
+</span></span><span class=line><span class=cl>    ]  
+</span></span><span class=line><span class=cl> }
+</span></span></code></pre></td></tr></table></div></div><a href=#유의-사항><h3 id=유의-사항><span class=hanchor arialabel=Anchor># </span>유의 사항</h3></a><ul><li>클러스터당 24시간에 최대 5번 사용 가능</li><li>다른 클러스터의 샤드에서 작업을 동시에 호출 할 수 있다.</li><li>연속 호출되는 경우 첫 번째 노드 교체가 완료되어야 그 다음 요청 호출 가능하다.</li><li>이 기능은 어플리케이션 동작을 테스트 하기 위한 것이며 운영을 위한 기능이 아니다. 따라서 대규모 운영 환경에서는 AWS 자체적으로 해당 요청을 차단 할 수도 있다.</li></ul><a href=#redis-py-확인하기><h2 id=redis-py-확인하기><span class=hanchor arialabel=Anchor># </span>redis-py 확인하기</h2></a><p>위 테스트를 몇번 해 본 결과, 첫번째 장애 이후에는 문제없이 잘 동작한다. 하지만 두번째 장애가 난 후에는 계속하여 노드를 찾지 못한다.</p><a href=#1--reinitialize_steps-설정><h3 id=1--reinitialize_steps-설정><span class=hanchor arialabel=Anchor># </span>1) <code>reinitialize_steps</code> 설정</h3></a><p>Redis Client 설정값 중 <code>reinitialize_steps</code> 라는 녀석이 있다. (
+<a href=https://github.com/redis/redis-py/blob/428d60940f386d3680a413aa327889308f82c5de/redis/cluster.py#L506-L515 rel=noopener>redis-py/redis/cluster.py</a>)</p><blockquote><p>reinitialize_steps (int, default: 5) –
+Specifies the number of MOVED errors that need to occur before reinitializing the whole cluster topology. If a MOVED error occurs and the cluster does not need to be reinitialized on this current error handling, only the MOVED slot will be patched with the redirected node. To reinitialize the cluster on every MOVED error, set reinitialize_steps to 1. To avoid reinitializing the cluster on moved errors, set reinitialize_steps to 0.</p></blockquote><p>즉, <code>MOVED error</code>가 난 slot에 대해서 redirected node로 패치를 해준다는 것인데.
+<code>MOVEDError</code>(
+<a href=https://github.com/redis/redis-py/blob/master/redis/exceptions.py#L173-L180 rel=noopener>redis-py/redis/exceptions.py</a>)란 cluster에서 해당 키가 없는 노드에다가 요청하면 Cluster 에서 올바른 노드를 알려주는 Error다.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-py data-lang=py><span class=line><span class=cl><span class=k>class</span> <span class=nc>MovedError</span><span class=p>(</span><span class=n>AskError</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>    <span class=s2>&#34;&#34;&#34;
+</span></span></span><span class=line><span class=cl><span class=s2>    Error indicated MOVED error received from cluster.
+</span></span></span><span class=line><span class=cl><span class=s2>    A request sent to a node that doesn&#39;t serve this key will be replayed with
+</span></span></span><span class=line><span class=cl><span class=s2>    a MOVED error that points to the correct node.
+</span></span></span><span class=line><span class=cl><span class=s2>    &#34;&#34;&#34;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=k>pass</span>
+</span></span></code></pre></td></tr></table></div></div><p>Redis client를 통해 command를 실행하였을 때 MOVED error가 발생하게 되면 내부에서 <code>_should_reinitialized</code> 함수가 불리우게 된다. (
+<a href=https://github.com/redis/redis-py/blob/master/redis/cluster.py#L1134-L1147 rel=noopener>redis-py//redis/cluster.py</a>)</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-py data-lang=py><span class=line><span class=cl><span class=o>...</span>
+</span></span><span class=line><span class=cl>	<span class=k>except</span> <span class=n>MovedError</span> <span class=k>as</span> <span class=n>e</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>		<span class=c1># First, we will try to patch the slots/nodes cache with the</span>
+</span></span><span class=line><span class=cl>		<span class=c1># redirected node output and try again. If MovedError exceeds</span>
+</span></span><span class=line><span class=cl>		<span class=c1># &#39;reinitialize_steps&#39; number of times, we will force</span>
+</span></span><span class=line><span class=cl>		<span class=c1># reinitializing the tables, and then try again.</span>
+</span></span><span class=line><span class=cl>		<span class=c1># &#39;reinitialize_steps&#39; counter will increase faster when</span>
+</span></span><span class=line><span class=cl>		<span class=c1># the same client object is shared between multiple threads. To</span>
+</span></span><span class=line><span class=cl>		<span class=c1># reduce the frequency you can set this variable in the</span>
+</span></span><span class=line><span class=cl>		<span class=c1># RedisCluster constructor.</span>
+</span></span><span class=line><span class=cl>		<span class=bp>self</span><span class=o>.</span><span class=n>reinitialize_counter</span> <span class=o>+=</span> <span class=mi>1</span>
+</span></span><span class=line><span class=cl>		<span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>_should_reinitialized</span><span class=p>():</span>
+</span></span><span class=line><span class=cl>			<span class=bp>self</span><span class=o>.</span><span class=n>nodes_manager</span><span class=o>.</span><span class=n>initialize</span><span class=p>()</span>
+</span></span><span class=line><span class=cl>			<span class=c1># Reset the counter</span>
+</span></span><span class=line><span class=cl>			<span class=bp>self</span><span class=o>.</span><span class=n>reinitialize_counter</span> <span class=o>=</span> <span class=mi>0</span>
+</span></span><span class=line><span class=cl>		<span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>			<span class=bp>self</span><span class=o>.</span><span class=n>nodes_manager</span><span class=o>.</span><span class=n>update_moved_exception</span><span class=p>(</span><span class=n>e</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>		<span class=n>moved</span> <span class=o>=</span> <span class=kc>True</span>
+</span></span><span class=line><span class=cl><span class=o>...</span>
+</span></span></code></pre></td></tr></table></div></div><p>이 함수 내에서 Redis Client 설정시 넘겨주었던 <code>reinitialized_steps</code> 가 사용된다.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-py data-lang=py><span class=line><span class=cl><span class=k>def</span> <span class=nf>_should_reinitialized</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>	<span class=c1># To reinitialize the cluster on every MOVED error,</span>
+</span></span><span class=line><span class=cl>	<span class=c1># set reinitialize_steps to 1.</span>
+</span></span><span class=line><span class=cl>	<span class=c1># To avoid reinitializing the cluster on moved errors, set</span>
+</span></span><span class=line><span class=cl>	<span class=c1># reinitialize_steps to 0.</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>	<span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>reinitialize_steps</span> <span class=o><mark></span> <span class=mi>0</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>		<span class=k>return</span> <span class=kc>False</span>
+</span></span><span class=line><span class=cl>	<span class=k>else</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>		<span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>reinitialize_counter</span> <span class=o>%</span> <span class=bp>self</span><span class=o>.</span><span class=n>reinitialize_steps</span> <span class=o></mark></span> <span class=mi>0</span>
+</span></span></code></pre></td></tr></table></div></div><p>따라서, 넘겨준 n번의 MOVED error가 발생하였을 때, 그 때 reinitialize 해주는 로직이다. MOVED가 일어날 때 마다 reinitialize 해주려면 <code>1</code>로, 일어나지 않게 하려면 <code>0</code>으로 세팅하면 된다. (기본 값은 <code>5</code>이다)</p><p>위 상황을 미뤄 보았을 때, 변경된 node를 알아채지 못하여 reachable node를 못찾은 건가 싶어 <code>1</code>로 설정하고 다시 테스트를 해보았다. 하지만 여전히 해결되지 못했다.</p><a href=#2-nodemanager-이슈><h3 id=2-nodemanager-이슈><span class=hanchor arialabel=Anchor># </span>2) <code>NodeManager</code> 이슈</h3></a><p>정확하게 저 에러 메세지가 일어나는 부분부터 다시 확인을 하였다.
+에러가 난 부분은 아래 코드이다. (
+<a href=https://github.com/redis/redis-py/blob/master/redis/cluster.py#L1551-L1555 rel=noopener>redis-py/redis/cluster.py</a>)</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-py data-lang=py><span class=line><span class=cl><span class=k>class</span> <span class=nc>NodesManager</span><span class=p>:</span>
+</span></span><span class=line><span class=cl><span class=o>...</span>
+</span></span><span class=line><span class=cl>	<span class=k>def</span> <span class=nf>initialize</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</span></span><span class=line><span class=cl>	<span class=o>...</span>
+</span></span><span class=line><span class=cl>	<span class=n>startup_nodes_reachable</span> <span class=o>=</span> <span class=kc>False</span>
+</span></span><span class=line><span class=cl>	
+</span></span><span class=line><span class=cl>	<span class=k>for</span> <span class=n>startup_node</span> <span class=ow>in</span> <span class=bp>self</span><span class=o>.</span><span class=n>startup_nodes</span><span class=o>.</span><span class=n>values</span><span class=p>():</span>
+</span></span><span class=line><span class=cl>		<span class=n>startup_nodes_reachable</span> <span class=o>=</span> <span class=kc>True</span>
+</span></span><span class=line><span class=cl>	
+</span></span><span class=line><span class=cl>	<span class=o>...</span>
+</span></span><span class=line><span class=cl>	<span class=k>if</span> <span class=ow>not</span> <span class=n>startup_nodes_reachable</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>		<span class=k>raise</span> <span class=n>RedisClusterException</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>			<span class=sa>f</span><span class=s2>&#34;Redis Cluster cannot be connected. Please provide at least &#34;</span>
+</span></span><span class=line><span class=cl>			<span class=sa>f</span><span class=s2>&#34;one reachable node: </span><span class=si>{</span><span class=nb>str</span><span class=p>(</span><span class=n>exception</span><span class=p>)</span><span class=si>}</span><span class=s2>&#34;</span>
+</span></span><span class=line><span class=cl>		<span class=p>)</span> <span class=kn>from</span> <span class=nn>exception</span>
+</span></span></code></pre></td></tr></table></div></div><p><code>NodeManager</code> 에서 initialize 시에 reachable한 node가 없는 경우 생기는 이슈다. 여기서 <code>startup_nodes_reachable</code>는 <code>NodeManager</code> 생성시 넘어온 startup_nodes를 루프를 돌며 설정이 되는데 이때, 모든 node가 reachable 하지 못했던 것이였다.</p><p>여기서 사용한 <code>self.startup_nodes</code>는 <code>RedisCluster</code> 처음 생성될 때 url 혹은 host, port 정보를 통해 Cluster에 등록된 node들을 한번에 가져와 등록을 해준다. (
+<a href=https://github.com/redis/redis-py/blob/master/redis/cluster.py#L534-L554 rel=noopener>redis-py/redis/cluster.py</a>)</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-py data-lang=py><span class=line><span class=cl><span class=k>class</span> <span class=nc>RedisCluster</span><span class=p>(</span><span class=n>AbstractRedisCluster</span><span class=p>,</span> <span class=n>RedisClusterCommands</span><span class=p>):</span>
+</span></span><span class=line><span class=cl><span class=o>...</span>
+</span></span><span class=line><span class=cl><span class=k>def</span> <span class=fm>__init__</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>	<span class=bp>self</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=n>host</span><span class=p>:</span> <span class=n>Optional</span><span class=p>[</span><span class=nb>str</span><span class=p>]</span> <span class=o>=</span> <span class=kc>None</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=n>port</span><span class=p>:</span> <span class=nb>int</span> <span class=o>=</span> <span class=mi>6379</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=n>startup_nodes</span><span class=p>:</span> <span class=n>Optional</span><span class=p>[</span><span class=n>List</span><span class=p>[</span><span class=s2>&#34;ClusterNode&#34;</span><span class=p>]]</span> <span class=o>=</span> <span class=kc>None</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=n>cluster_error_retry_attempts</span><span class=p>:</span> <span class=nb>int</span> <span class=o>=</span> <span class=mi>3</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=n>retry</span><span class=p>:</span> <span class=n>Optional</span><span class=p>[</span><span class=s2>&#34;Retry&#34;</span><span class=p>]</span> <span class=o>=</span> <span class=kc>None</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=n>require_full_coverage</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=kc>False</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=n>reinitialize_steps</span><span class=p>:</span> <span class=nb>int</span> <span class=o>=</span> <span class=mi>5</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=n>read_from_replicas</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=kc>False</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=n>dynamic_startup_nodes</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=kc>True</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=n>url</span><span class=p>:</span> <span class=n>Optional</span><span class=p>[</span><span class=nb>str</span><span class=p>]</span> <span class=o>=</span> <span class=kc>None</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=o>**</span><span class=n>kwargs</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=p>):</span>
+</span></span><span class=line><span class=cl>	<span class=o>...</span>
+</span></span><span class=line><span class=cl>	<span class=k>if</span> <span class=n>url</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>		<span class=n>url_options</span> <span class=o>=</span> <span class=n>parse_url</span><span class=p>(</span><span class=n>url</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>		<span class=o>...</span>
+</span></span><span class=line><span class=cl>		<span class=n>kwargs</span><span class=o>.</span><span class=n>update</span><span class=p>(</span><span class=n>url_options</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>		<span class=n>host</span> <span class=o>=</span> <span class=n>kwargs</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s2>&#34;host&#34;</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>		<span class=n>port</span> <span class=o>=</span> <span class=n>kwargs</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s2>&#34;port&#34;</span><span class=p>,</span> <span class=n>port</span><span class=p>)</span>
+</span></span><span class=line><span class=cl>		<span class=n>startup_nodes</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>ClusterNode</span><span class=p>(</span><span class=n>host</span><span class=p>,</span> <span class=n>port</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>	<span class=k>elif</span> <span class=n>host</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span> <span class=ow>and</span> <span class=n>port</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span><span class=p>:</span>
+</span></span><span class=line><span class=cl>		<span class=n>startup_nodes</span><span class=o>.</span><span class=n>append</span><span class=p>(</span><span class=n>ClusterNode</span><span class=p>(</span><span class=n>host</span><span class=p>,</span> <span class=n>port</span><span class=p>))</span>
+</span></span><span class=line><span class=cl>	<span class=o>...</span>
+</span></span><span class=line><span class=cl>	<span class=bp>self</span><span class=o>.</span><span class=n>nodes_manager</span> <span class=o>=</span> <span class=n>NodesManager</span><span class=p>(</span>
+</span></span><span class=line><span class=cl>		<span class=n>startup_nodes</span><span class=o>=</span><span class=n>startup_nodes</span><span class=p>,</span> <span class=c1># 여기! </span>
+</span></span><span class=line><span class=cl>		<span class=n>from_url</span><span class=o>=</span><span class=n>from_url</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>		<span class=n>require_full_coverage</span><span class=o>=</span><span class=n>require_full_coverage</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>		<span class=n>dynamic_startup_nodes</span><span class=o>=</span><span class=n>dynamic_startup_nodes</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>		<span class=o>**</span><span class=n>kwargs</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>	<span class=p>)</span>
+</span></span></code></pre></td></tr></table></div></div><p>이 과정은 RedisClient가 처음 init 될때 생성한 <code>startup_nodes</code> 로 <code>__init__</code> 이후에는 변하지 않는다. 즉, 처음 RedisClient 객체가 생성할 때 가지고 온 node로 계속하여 initialize를 하는 것이다. <code>NodeManager</code>에서는 node의 IP addr를 보고 있기 때문에, node가 내려갔다 다시 뜨면서 IP가 변경되면서 <code>NodeManager</code>에서는 해당 node를 찾을 수 없다.</p><p>내 상황의 경우 cluster에 유효한 node가 처음 뜰 때 <code>startup_node</code> 로 등록되었고 2번 failover를 하게되면 더 이상 이 Cluster Client가 알 수 있는 node를 모두 사용했기 때문에 더 이상 reachable node가 없는 것이였다.찾아보니
+<a href=https://github.com/redis/redis-py/issues/2472 rel=noopener>이미 2022년 11월에 redis-py issue</a>로 올라와있는 상태였고, 2023년 2월 현재 아직 fix가 되지 않은 상태이다. 이상적인 방법은 Client가 reinitialize 될때,
+라이브러리를 업데이트를 기다리고 있을 수만은 없어 exception 발생시 다시 Client 자체를 새로 생성하여 <code>__init__</code>을 다시 하여 node를 찾을 수 있게 임시방편을 추가했다.</p></article><div><script src=https://utteranc.es/client.js repo=jiyeonseo/digital-garden issue-term=pathname theme=github-light crossorigin=anonymous async></script></div><hr><div class=page-end id=footer><div class=backlinks-container><h3>Backlinks</h3><ul class=backlinks><li>No backlinks found</li></ul></div><div><script src=https://cdn.jsdelivr.net/npm/d3@6.7.0/dist/d3.min.js integrity="sha256-+7jaYCp29O1JusNWHaYtgUn6EhuP0VaFuswhNV06MyI=" crossorigin=anonymous></script><h3>Interactive Graph</h3><div id=graph-container></div><style>:root{--g-node:var(--secondary);--g-node-active:var(--primary);--g-node-inactive:var(--visited);--g-link:var(--outlinegray);--g-link-active:#5a7282}</style><script src=https://jiyeonseo.github.io/digital-garden/js/graph.abd4bc2af3869a96524d7d23b76152c7.js></script></div></div><div id=contact_buttons><footer><p>Made by Jiyeon Seo using <a href=https://github.com/jackyzha0/quartz>Quartz</a>, © 2023</p><ul><li><a href=https://jiyeonseo.github.io/digital-garden/>Home</a></li><li><a href=https://jiyeonseo.github.io>Blog</a></li><li><a href=https://twitter.com/seojeee>Twitter</a></li><li><a href=https://github.com/jiyeonseo>Github</a></li></ul></footer></div></div></body></html>
