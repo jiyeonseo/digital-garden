@@ -1,14 +1,14 @@
 ---
-title: "Build Your Own Redis with C/C++"
+title: "Build Your Own Redis with C/C++ 1"
 tags:
 - redis
 - C
 ---
 > [Build Your Own Redis With C/C++](https://build-your-own.org/redis) 을 보고 정리한 글입니다. 더 자세한 나용은 원문을 참고하실 수 있습니다. 직접 실습한 코드는 [jiyeonseo/build-your-own-redis-with-c-cpp](https://github.com/jiyeonseo/build-your-own-redis-with-c-cpp) 에서 찾아볼 수 있습니다.
 
-`chap 1`은 책에 대한 introduction으로 생략.
+`chap 1`은 책에 대한 introduction으로 생략. 
 
-## 2. Socket 동작 방식 
+## Socket 동작 방식 
 - Redis는 서버-클라이언트 TCP 연결을 통하여 요청/응답 수신
 
 ### 서버 workflow 수도코드
@@ -39,9 +39,9 @@ close(fd)
 ```
 - `connect()` : 소켓 `fd` 주소를 받아 `address`와 연결
 
-## 3. Server/Client 
+## Simple Server/Client 
 
-### 서버 
+### Server 
 ```cpp
 // 먼저 소켓 `fd` 생성
 int fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -157,7 +157,7 @@ server says: world
 > 코드 : https://github.com/jiyeonseo/build-your-own-redis-with-c-cpp/tree/main/03
 
 
-## 4. Protocol Parsing
+## Protocol Parsing
 클라이언트와 주고 받을 프로토콜을 정의해보자. 먼저 요청 길이 선언부터.
 ### Server
 ```cpp
@@ -308,6 +308,8 @@ static int32_t query(int fd, const char *text) {
     return 0;
 }
 ```
+
+
 
 ---
 ## Source Code 
