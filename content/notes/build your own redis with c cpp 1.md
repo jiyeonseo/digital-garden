@@ -1,5 +1,5 @@
 ---
-title: "Build Your Own Redis with C/C++ 1"
+title: "(Build Your Own Redis with C/C++) 1. socket 통신, Protocol Parsing"
 tags:
 - redis
 - C
@@ -260,6 +260,7 @@ static int32_t one_request(int connfd) {
     return write_all(connfd, wbuf, 4 + len);
 }
 ```
+- line 7과 line 25에서 `read` 가 두 번 되고 있다. "buffered IO”를 이용하면 syscall을 줄일 수 있다. 한 번의 버퍼에 최대한 많은 양을 읽고 여러 요청을 한번에 파싱하는 방법으로 더 효율적이다. 
 
 ### Client
 ```cpp
@@ -309,7 +310,9 @@ static int32_t query(int fd, const char *text) {
 }
 ```
 
+이 장에서는 아주 간단한 len 에 대한 프로토콜만 실습하여보았지만 실제 프로토콜은 훨씬 더 복잡하다. 또 바이너리 대신 텍스트를 사용하는데, 이는 사람이 읽기 쉬운 장점이 있지만, 파씽 부분에서 바이너리보다 더 신경써야 하는 부분이 많다. 또 프로토콜에 따라 구분 부호가 달라지거나 없을 수 있기 때문에 프로토콜 분석은 실습보다 더 어려울 수 있다. 
 
+> 코드 : https://github.com/jiyeonseo/build-your-own-redis-with-c-cpp/tree/main/04
 
 ---
 ## Source Code 
