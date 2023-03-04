@@ -28,7 +28,7 @@ while True:
 - `accept()` : 수신 `fd`를 받아 연결 소켓을 반환. `conn_fd` 
 - `read()` : TCP 연결에서 데이터를 수신 
 - `write()` : 데이터 전송
-- `close()` : `fd`가 참고하고 있는 리소스를 삭제하고 `fd` 숫자를 재활
+- `close()` : `fd`가 참고하고 있는 리소스를 삭제하고 `fd` 숫자를 재활용
 
 ### 클라이언트 workflow 수도코드
 ```c
@@ -137,21 +137,6 @@ int fd = socket(AF_INET, SOCK_STREAM, 0);
     }
     printf("server says: %s\n", rbuf);
     close(fd);
-```
-
-### Compile & Run
-```bash
-g++ -Wall -Wextra -O2 -g 03_server.cpp -o server
-g++ -Wall -Wextra -O2 -g 03_client.cpp -o client
-```
-위 컴파일된 `server`와 `client`를 실행하면 client쪽에서는 `hello` 를 보내고 그 응답값으로 `world`라는 응답이 돌아온다.
-```sh
-$ ./server
-client says: hello
-```
-```sh
-$ ./client
-server says: world
 ```
 
 > 코드 : https://github.com/jiyeonseo/build-your-own-redis-with-c-cpp/tree/main/03
