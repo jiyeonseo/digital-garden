@@ -299,6 +299,8 @@ static int32_t query(int fd, const char *text) {
 
 > 코드 : https://github.com/jiyeonseo/build-your-own-redis-with-c-cpp/tree/main/04
 
+[[notes/build your own redis with c cpp 2]] 에 이어집니다. 
+
 ---
 ## Source Code 
 - [jiyeonseo/build-your-own-redis-with-c-cpp](https://github.com/jiyeonseo/build-your-own-redis-with-c-cpp)
