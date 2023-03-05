@@ -1,0 +1,545 @@
+<!doctype html><html lang=en><head><meta charset=utf-8><meta name=description content="Build Your Own Redis With C/C++ 을 보고 정리한 글입니다. 더 자세한 나용은 원문을 참고하실 수 있습니다. 직접 실습한 코드는 jiyeonseo/build-your-own-redis-with-c-cpp 에서 찾아볼 수 있습니다."><title>(Build Your Own Redis with C/C++) 2. Event Loop</title><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" type=image/png href=https://jiyeonseo.github.io/digital-garden//icon.png><link href=https://jiyeonseo.github.io/digital-garden/styles.706bb6073ba85d26809f9096dae23a6b.min.css rel=stylesheet><link href=https://jiyeonseo.github.io/digital-garden/styles/_light_syntax.86a48a52faebeaaf42158b72922b1c90.min.css rel=stylesheet id=theme-link><script src=https://jiyeonseo.github.io/digital-garden/js/darkmode.c4cfc44be7d7552270952c408c57bff2.min.js></script>
+<script src=https://jiyeonseo.github.io/digital-garden/js/util.fa8e74b4065b97e6980a72cc472e436f.min.js></script>
+<link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css integrity=sha384-R4558gYOUz8mP9YWpZJjofhk+zx0AS11p36HnD2ZKj/6JR5z27gSSULCNHIRReVs crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.js integrity=sha384-z1fJDqw8ZApjGO3/unPWUPsIymfsJmyrDVWC8Tv/a1HeOtGmkwNd/7xUS0Xcnvsx crossorigin=anonymous></script>
+<script defer src=https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/contrib/auto-render.min.js integrity=sha384-+XBljXPPiv+OzfbB3cVmLHf4hdUFHlWNZN5spNQ7rmHTXpd7WvJum6fIACpNNfIR crossorigin=anonymous></script>
+<script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/contrib/copy-tex.min.js integrity=sha384-ww/583aHhxWkz5DEVn6OKtNiIaLi2iBRNZXfJRiY1Ai7tnJ9UXpEsyvOITVpTl4A crossorigin=anonymous></script>
+<script src=https://unpkg.com/@floating-ui/core@0.7.3></script>
+<script src=https://unpkg.com/@floating-ui/dom@0.5.4></script>
+<script src=https://jiyeonseo.github.io/digital-garden/js/popover.9b72b70bd35617d0635e9d15463662b2.min.js></script>
+<script src=https://jiyeonseo.github.io/digital-garden/js/code-title.b35124ad8db0ba37162b886afb711cbc.min.js></script>
+<script src=https://jiyeonseo.github.io/digital-garden/js/clipboard.c20857734e53a3fb733b7443879efa61.min.js></script>
+<script src=https://jiyeonseo.github.io/digital-garden/js/callouts.7723cac461d613d118ee8bb8216b9838.min.js></script>
+<script>const SEARCH_ENABLED=!1,PRODUCTION=!0,BASE_URL="https://jiyeonseo.github.io/digital-garden/",fetchData=Promise.all([fetch("https://jiyeonseo.github.io/digital-garden/indices/linkIndex.b13cc8f7a435ad25595ae350c4c8c6c9.min.json").then(e=>e.json()).then(e=>({index:e.index,links:e.links})),fetch("https://jiyeonseo.github.io/digital-garden/indices/contentIndex.ccfd7cdf9db547dbbff27db6d20c78d6.min.json").then(e=>e.json())]).then(([{index:e,links:t},n])=>({index:e,links:t,content:n})),render=()=>{const e=new URL(BASE_URL),t=e.pathname,n=window.location.pathname,s=t==n;addCopyButtons(),addTitleToCodeBlocks(),addCollapsibleCallouts(),initPopover("https://jiyeonseo.github.io/digital-garden",!0,!0);const o=document.getElementById("footer");if(o){const e=document.getElementById("graph-container");if(!e)return requestAnimationFrame(render);e.textContent="";const t=s&&!1;drawGraph("https://jiyeonseo.github.io/digital-garden",t,[{"/moc":"#4388cc"}],t?{centerForce:1,depth:-1,enableDrag:!0,enableLegend:!1,enableZoom:!0,fontSize:.5,linkDistance:1,opacityScale:3,repelForce:1,scale:1.4}:{centerForce:1,depth:1,enableDrag:!0,enableLegend:!1,enableZoom:!0,fontSize:.6,linkDistance:1,opacityScale:3,repelForce:2,scale:1.2})}},init=(e=document)=>{addCopyButtons(),addTitleToCodeBlocks(),renderMathInElement(e.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}],macros:{'’':"'"},throwOnError:!1})}</script><script type=module>
+    import { attachSPARouting } from "https:\/\/jiyeonseo.github.io\/digital-garden\/js\/router.9d4974281069e9ebb189f642ae1e3ca2.min.js"
+    attachSPARouting(init, render)
+  </script></head><script async src="https://www.googletagmanager.com/gtag/js?id=G-T5QZV24KX4"></script>
+<script>var doNotTrack=!1;if(!doNotTrack){window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-T5QZV24KX4",{anonymize_ip:!1})}</script><body><div id=search-container><div id=search-space><input autocomplete=off id=search-bar name=search type=text aria-label=Search placeholder="Search for something..."><div id=results-container></div></div></div><script src=https://cdn.jsdelivr.net/npm/flexsearch@0.7.21/dist/flexsearch.bundle.js integrity="sha256-i3A0NZGkhsKjVMzFxv3ksk0DZh3aXqu0l49Bbh0MdjE=" crossorigin=anonymous defer></script>
+<script defer src=https://jiyeonseo.github.io/digital-garden/js/full-text-search.51f0b1753e9b30839d053f8a98cc20d1.min.js></script><div class=singlePage><header><h1 id=page-title><a href=https://jiyeonseo.github.io/digital-garden/>🪴 Daily gardening</a></h1><div class=spacer></div><div id=search-icon><p>Search</p><svg tabindex="0" aria-labelledby="title desc" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.9 19.7"><title id="title">Search Icon</title><desc id="desc">Icon to open search</desc><g class="search-path" fill="none"><path stroke-linecap="square" d="M18.5 18.3l-5.4-5.4"/><circle cx="8" cy="8" r="7"/></g></svg></div><div class=darkmode><input class=toggle id=darkmode-toggle type=checkbox tabindex=-1>
+<label id=toggle-label-light for=darkmode-toggle tabindex=-1><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="dayIcon" viewBox="0 0 35 35" style="enable-background:new 0 0 35 35"><title>Light Mode</title><path d="M6 17.5C6 16.672 5.328 16 4.5 16h-3C.672 16 0 16.672.0 17.5S.672 19 1.5 19h3C5.328 19 6 18.328 6 17.5zM7.5 26c-.414.0-.789.168-1.061.439l-2 2C4.168 28.711 4 29.086 4 29.5 4 30.328 4.671 31 5.5 31c.414.0.789-.168 1.06-.44l2-2C8.832 28.289 9 27.914 9 27.5 9 26.672 8.329 26 7.5 26zm10-20C18.329 6 19 5.328 19 4.5v-3C19 .672 18.329.0 17.5.0S16 .672 16 1.5v3C16 5.328 16.671 6 17.5 6zm10 3c.414.0.789-.168 1.06-.439l2-2C30.832 6.289 31 5.914 31 5.5 31 4.672 30.329 4 29.5 4c-.414.0-.789.168-1.061.44l-2 2C26.168 6.711 26 7.086 26 7.5 26 8.328 26.671 9 27.5 9zM6.439 8.561C6.711 8.832 7.086 9 7.5 9 8.328 9 9 8.328 9 7.5c0-.414-.168-.789-.439-1.061l-2-2C6.289 4.168 5.914 4 5.5 4 4.672 4 4 4.672 4 5.5c0 .414.168.789.439 1.06l2 2.001zM33.5 16h-3c-.828.0-1.5.672-1.5 1.5s.672 1.5 1.5 1.5h3c.828.0 1.5-.672 1.5-1.5S34.328 16 33.5 16zM28.561 26.439C28.289 26.168 27.914 26 27.5 26c-.828.0-1.5.672-1.5 1.5.0.414.168.789.439 1.06l2 2C28.711 30.832 29.086 31 29.5 31c.828.0 1.5-.672 1.5-1.5.0-.414-.168-.789-.439-1.061l-2-2zM17.5 29c-.829.0-1.5.672-1.5 1.5v3c0 .828.671 1.5 1.5 1.5s1.5-.672 1.5-1.5v-3C19 29.672 18.329 29 17.5 29zm0-22C11.71 7 7 11.71 7 17.5S11.71 28 17.5 28 28 23.29 28 17.5 23.29 7 17.5 7zm0 18c-4.136.0-7.5-3.364-7.5-7.5s3.364-7.5 7.5-7.5 7.5 3.364 7.5 7.5S21.636 25 17.5 25z"/></svg></label><label id=toggle-label-dark for=darkmode-toggle tabindex=-1><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="nightIcon" viewBox="0 0 100 100" style="enable-background='new 0 0 100 100'"><title>Dark Mode</title><path d="M96.76 66.458c-.853-.852-2.15-1.064-3.23-.534-6.063 2.991-12.858 4.571-19.655 4.571C62.022 70.495 50.88 65.88 42.5 57.5 29.043 44.043 25.658 23.536 34.076 6.47c.532-1.08.318-2.379-.534-3.23-.851-.852-2.15-1.064-3.23-.534-4.918 2.427-9.375 5.619-13.246 9.491-9.447 9.447-14.65 22.008-14.65 35.369.0 13.36 5.203 25.921 14.65 35.368s22.008 14.65 35.368 14.65c13.361.0 25.921-5.203 35.369-14.65 3.872-3.871 7.064-8.328 9.491-13.246C97.826 68.608 97.611 67.309 96.76 66.458z"/></svg></label></div></header><article><h1>(Build Your Own Redis with C/C++) 2. Event Loop</h1><p class=meta>Last updated
+Mar 5, 2023</p><ul class=tags><li><a href=https://jiyeonseo.github.io/digital-garden/tags/redis/>Redis</a></li><li><a href=https://jiyeonseo.github.io/digital-garden/tags/C/>C</a></li></ul><aside class=mainTOC><details><summary>Table of Contents</summary><nav id=TableOfContents><ol><li><a href=#the-event-loop-and-nonblocking-io>The Event Loop and Nonblocking IO</a></li></ol></nav></details></aside><blockquote><p><a href=https://build-your-own.org/redis rel=noopener>Build Your Own Redis With C/C++</a> 을 보고 정리한 글입니다. 더 자세한 나용은 원문을 참고하실 수 있습니다. 직접 실습한 코드는
+<a href=https://github.com/jiyeonseo/build-your-own-redis-with-c-cpp rel=noopener>jiyeonseo/build-your-own-redis-with-c-cpp</a> 에서 찾아볼 수 있습니다. <a href=/digital-garden/notes/build-your-own-redis-with-c-cpp-1 rel=noopener class=internal-link data-src=/digital-garden/notes/build-your-own-redis-with-c-cpp-1>build your own redis with c cpp 1</a> 이어지는 노트입니다.</p></blockquote><a href=#the-event-loop-and-nonblocking-io><h2 id=the-event-loop-and-nonblocking-io><span class=hanchor arialabel=Anchor># </span>The Event Loop and Nonblocking IO</h2></a><p>서버와의 네트워킹 동시 연결 처리 방법 3가지</p><ul><li>Forking : 클라이언트와의 연결마다 새로운 프로세스 만드는 방법</li><li>Multi-threading : 프로세스 대신 여러 쓰레드를 사용하는 방법</li><li>Event loops : 폴링과 논블로킹 IO를 이용하는 것으로 주로 단일 쓰레드위에서 실행. 프로세스와 쓰레드 오버헤드로 인해 대부분 이벤트 룹을 많이 사용하는 추세.</li></ul><p>event loop을 이용한 서버쪽은 다음과 같이 표현할 수 있다.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>all_fds = [...]
+</span></span><span class=line><span class=cl>while True:
+</span></span><span class=line><span class=cl>    active_fds = poll(all_fds) # blocking 없이 바로 작동 가능한지 확인 
+</span></span><span class=line><span class=cl>    for each fd in active_fds:
+</span></span><span class=line><span class=cl>        do_something_with(fd)
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>def do_something_with(fd):
+</span></span><span class=line><span class=cl>    if fd is a listening socket:
+</span></span><span class=line><span class=cl>        add_new_client(fd)
+</span></span><span class=line><span class=cl>    elif fd is a client connection:
+</span></span><span class=line><span class=cl>        while work_not_done(fd):
+</span></span><span class=line><span class=cl>            do_something_to_client(fd)
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>def do_something_to_client(fd):
+</span></span><span class=line><span class=cl>    if should_read_from(fd):
+</span></span><span class=line><span class=cl>        data = read_until_EAGAIN(fd)
+</span></span><span class=line><span class=cl>        process_incoming_data(data)
+</span></span><span class=line><span class=cl>    while should_write_to(fd):
+</span></span><span class=line><span class=cl>        write_until_EAGAIN(fd)
+</span></span><span class=line><span class=cl>    if should_close(fd):
+</span></span><span class=line><span class=cl>        destroy_client(fd)
+</span></span></code></pre></td></tr></table></div></div><ul><li><code>fd</code> 로 IO 작업을 하기 위해서는 nonblocking 모드여야 함<ul><li>blocking 모드에서는 아래와 같은 경우 block 된다.<ul><li><code>read</code> 실행시 커널에 데이터가 없으면</li><li><code>write</code> 실행시 버퍼가 가즉 찼으면</li><li><code>accept</code> 실행시 커널 큐에 커넥션이 없으면</li></ul></li><li>nonblocking 모드에서는, 그냥 성공 하거나 아직 준비 안됨 오류인 <code>EAGAIN</code> 오류를 내며 실패.<ul><li><code>EAGAIN</code> 오류가 나면 <code>poll</code> 을 통해 준비가 다 끝난 후 다시 시도해야만 함.</li></ul></li></ul></li><li><code>poll</code> : 이벤트 룹에서의 유일한 blocking 작업.</li><li>논블락킹 모드에서 blocking 밖에 지원하지 않는 API (예를 들어 <code>gethostbyname</code> 이나 disk IO) 는 쓰레드 풀에서 수행해야만 한다.</li><li><code>fd</code>를 논블락킹 모드로 세팅하기 위해서는 <code>fcntl</code>을 사용하면 된다.</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>static</span> <span class=kt>void</span> <span class=nf>fd_set_nb</span><span class=p>(</span><span class=kt>int</span> <span class=n>fd</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>errno</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>flags</span> <span class=o>=</span> <span class=n>fcntl</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=n>F_GETFL</span><span class=p>,</span> <span class=mi>0</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>errno</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>die</span><span class=p>(</span><span class=s>&#34;fcntl error&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>flags</span> <span class=o>|=</span> <span class=n>O_NONBLOCK</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>errno</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=n>fcntl</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=n>F_SETFL</span><span class=p>,</span> <span class=n>flags</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>errno</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>die</span><span class=p>(</span><span class=s>&#34;fcntl error&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li>Linux에서는 <code>poll</code> 이외에도 <code>select</code>, <code>epoll</code>과 같은 syscall들이 있다.<ul><li><code>select</code> : 기본적으로는 <code>poll</code>과 비슷. 하지만 최대 <code>fd</code> 제한수가 적어 요즘에는 사용되고 있지 않음.</li><li><code>epoll</code> : stateful API.<ul><li><code>epoll_create</code> : <code>fd</code> 생성</li><li><code>epoll_wait</code> : <code>fd</code> 작동</li><li><code>epoll_ctl</code> : <code>fd</code> 조작</li></ul></li></ul></li></ul><p>위 Event loop을 이용해서 서버 코드를 업데이트 해보자. 먼저 <code>Conn</code>.</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>enum</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>STATE_REQ</span> <span class=o>=</span> <span class=mi>0</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>STATE_RES</span> <span class=o>=</span> <span class=mi>1</span><span class=p>,</span>
+</span></span><span class=line><span class=cl>    <span class=n>STATE_END</span> <span class=o>=</span> <span class=mi>2</span><span class=p>,</span>  <span class=c1>// mark the connection for deletion
+</span></span></span><span class=line><span class=cl><span class=c1></span><span class=p>};</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>struct</span> <span class=nc>Conn</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>fd</span> <span class=o>=</span> <span class=o>-</span><span class=mi>1</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>uint32_t</span> <span class=n>state</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>     <span class=c1>// either STATE_REQ or STATE_RES
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=c1>// buffer for reading
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>size_t</span> <span class=n>rbuf_size</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>uint8_t</span> <span class=n>rbuf</span><span class=p>[</span><span class=mi>4</span> <span class=o>+</span> <span class=n>k_max_msg</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// buffer for writing
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>size_t</span> <span class=n>wbuf_size</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>size_t</span> <span class=n>wbuf_sent</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=kt>uint8_t</span> <span class=n>wbuf</span><span class=p>[</span><span class=mi>4</span> <span class=o>+</span> <span class=n>k_max_msg</span><span class=p>];</span>
+</span></span><span class=line><span class=cl><span class=p>};</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li>nonblocking 모드에서 IO 작업(read, write)를 위한 버퍼 필요</li><li><code>state</code> connection 상태용<ul><li><code>STATE_REQ</code> : reqding request 용</li><li><code>STATE_RES</code> : sending response 용</li></ul></li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>fd</span> <span class=o>=</span> <span class=n>socket</span><span class=p>(</span><span class=n>AF_INET</span><span class=p>,</span> <span class=n>SOCK_STREAM</span><span class=p>,</span> <span class=mi>0</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>fd</span> <span class=o>&lt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>die</span><span class=p>(</span><span class=s>&#34;socket()&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// bind, listen and etc
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=c1>// code omitted...
+</span></span></span><span class=line><span class=cl><span class=c1></span>
+</span></span><span class=line><span class=cl>    <span class=c1>// a map of all client connections, keyed by fd
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>std</span><span class=o>::</span><span class=n>vector</span><span class=o>&lt;</span><span class=n>Conn</span> <span class=o>*&gt;</span> <span class=n>fd2conn</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// set the listen fd to nonblocking mode
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>fd_set_nb</span><span class=p>(</span><span class=n>fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// the event loop
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>std</span><span class=o>::</span><span class=n>vector</span><span class=o>&lt;</span><span class=k>struct</span> <span class=nc>pollfd</span><span class=o>&gt;</span> <span class=n>poll_args</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>while</span> <span class=p>(</span><span class=nb>true</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=c1>// prepare the arguments of the poll()
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=n>poll_args</span><span class=p>.</span><span class=n>clear</span><span class=p>();</span>
+</span></span><span class=line><span class=cl>        <span class=c1>// for convenience, the listening fd is put in the first position
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=k>struct</span> <span class=nc>pollfd</span> <span class=n>pfd</span> <span class=o>=</span> <span class=p>{</span><span class=n>fd</span><span class=p>,</span> <span class=n>POLLIN</span><span class=p>,</span> <span class=mi>0</span><span class=p>};</span>
+</span></span><span class=line><span class=cl>        <span class=n>poll_args</span><span class=p>.</span><span class=n>push_back</span><span class=p>(</span><span class=n>pfd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=c1>// connection fds
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=k>for</span> <span class=p>(</span><span class=n>Conn</span> <span class=o>*</span><span class=nl>conn</span> <span class=p>:</span> <span class=n>fd2conn</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=n>conn</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>                <span class=k>continue</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>            <span class=p>}</span>
+</span></span><span class=line><span class=cl>            <span class=k>struct</span> <span class=nc>pollfd</span> <span class=n>pfd</span> <span class=o>=</span> <span class=p>{};</span>
+</span></span><span class=line><span class=cl>            <span class=n>pfd</span><span class=p>.</span><span class=n>fd</span> <span class=o>=</span> <span class=n>conn</span><span class=o>-&gt;</span><span class=n>fd</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>            <span class=n>pfd</span><span class=p>.</span><span class=n>events</span> <span class=o>=</span> <span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o><mark></span> <span class=n>STATE_REQ</span><span class=p>)</span> <span class=o>?</span> <span class=nl>POLLIN</span> <span class=p>:</span> <span class=n>POLLOUT</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>            <span class=n>pfd</span><span class=p>.</span><span class=n>events</span> <span class=o>=</span> <span class=n>pfd</span><span class=p>.</span><span class=n>events</span> <span class=o>|</span> <span class=n>POLLERR</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>            <span class=n>poll_args</span><span class=p>.</span><span class=n>push_back</span><span class=p>(</span><span class=n>pfd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=c1>// poll for active fds
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=c1>// the timeout argument doesn&#39;t matter here
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=kt>int</span> <span class=n>rv</span> <span class=o>=</span> <span class=n>poll</span><span class=p>(</span><span class=n>poll_args</span><span class=p>.</span><span class=n>data</span><span class=p>(),</span> <span class=p>(</span><span class=n>nfds_t</span><span class=p>)</span><span class=n>poll_args</span><span class=p>.</span><span class=n>size</span><span class=p>(),</span> <span class=mi>1000</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=p>(</span><span class=n>rv</span> <span class=o>&lt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=n>die</span><span class=p>(</span><span class=s>&#34;poll&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=c1>// process active connections
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=k>for</span> <span class=p>(</span><span class=n>size_t</span> <span class=n>i</span> <span class=o>=</span> <span class=mi>1</span><span class=p>;</span> <span class=n>i</span> <span class=o>&lt;</span> <span class=n>poll_args</span><span class=p>.</span><span class=n>size</span><span class=p>();</span> <span class=o>++</span><span class=n>i</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=k>if</span> <span class=p>(</span><span class=n>poll_args</span><span class=p>[</span><span class=n>i</span><span class=p>].</span><span class=n>revents</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>                <span class=n>Conn</span> <span class=o>*</span><span class=n>conn</span> <span class=o>=</span> <span class=n>fd2conn</span><span class=p>[</span><span class=n>poll_args</span><span class=p>[</span><span class=n>i</span><span class=p>].</span><span class=n>fd</span><span class=p>];</span>
+</span></span><span class=line><span class=cl>                <span class=n>connection_io</span><span class=p>(</span><span class=n>conn</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>                <span class=k>if</span> <span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o></mark></span> <span class=n>STATE_END</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>                    <span class=c1>// client closed normally, or something bad happened.
+</span></span></span><span class=line><span class=cl><span class=c1></span>                    <span class=c1>// destroy this connection
+</span></span></span><span class=line><span class=cl><span class=c1></span>                    <span class=n>fd2conn</span><span class=p>[</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>fd</span><span class=p>]</span> <span class=o>=</span> <span class=nb>NULL</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>                    <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=n>close</span><span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>                    <span class=n>free</span><span class=p>(</span><span class=n>conn</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>                <span class=p>}</span>
+</span></span><span class=line><span class=cl>            <span class=p>}</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=c1>// try to accept a new connection if the listening fd is active
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=k>if</span> <span class=p>(</span><span class=n>poll_args</span><span class=p>[</span><span class=mi>0</span><span class=p>].</span><span class=n>revents</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=p>(</span><span class=kt>void</span><span class=p>)</span><span class=n>accept_new_conn</span><span class=p>(</span><span class=n>fd2conn</span><span class=p>,</span> <span class=n>fd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li>이벤트 룹에서 가장 먼저 필요한 것은 <code>poll</code> 설정<ul><li>listening <code>fd</code> : <code>POLLIN</code> 상태로</li><li>connection <code>fd</code> : struct <code>Conn</code> 에 따라 상태가 변경</li></ul></li><li>때에 따라, poll 상태가 reading(<code>POLLIN</code>) 이거나 writing (<code>POLLOUT</code>)이 아닌 경우도 있다.</li><li><code>epoll</code>을 사용한다면 <code>epoll_ctl</code> 로 설정된 <code>fd</code> 로 업데이트 해주어야 한다.</li><li><code>poll</code> argument로 timeout 값 설정도 있는데 여기서는 크게 중요하지 않음으로 임의의 큰 수를 넣어줌.</li><li><code>poll</code>을 반환 받으면 reading/writing 준비가 될때 마다 알림을 받을 수 있다.</li><li><code>accept_new_conn</code> 은 새로운 connection을 받고 <code>struct Conn</code> 객체를 만든다. (아래)</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>static</span> <span class=kt>int32_t</span> <span class=nf>accept_new_conn</span><span class=p>(</span><span class=n>std</span><span class=o>::</span><span class=n>vector</span><span class=o>&lt;</span><span class=n>Conn</span> <span class=o>*&gt;</span> <span class=o>&amp;</span><span class=n>fd2conn</span><span class=p>,</span> <span class=kt>int</span> <span class=n>fd</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// accept 
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>struct</span> <span class=nc>sockaddr_in</span> <span class=n>client_addr</span> <span class=o>=</span> <span class=p>{};</span>
+</span></span><span class=line><span class=cl>    <span class=n>socklen_t</span> <span class=n>socklen</span> <span class=o>=</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>client_addr</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=kt>int</span> <span class=n>connfd</span> <span class=o>=</span> <span class=n>accept</span><span class=p>(</span><span class=n>fd</span><span class=p>,</span> <span class=p>(</span><span class=k>struct</span> <span class=nc>sockaddr</span> <span class=o>*</span><span class=p>)</span><span class=o>&amp;</span><span class=n>client_addr</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>socklen</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>connfd</span> <span class=o>&lt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>msg</span><span class=p>(</span><span class=s>&#34;accept() error&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=o>-</span><span class=mi>1</span><span class=p>;</span>  <span class=c1>// error
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// set the new connection fd to nonblocking mode
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>fd_set_nb</span><span class=p>(</span><span class=n>connfd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// creating the struct Conn
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>struct</span> <span class=nc>Conn</span> <span class=o>*</span><span class=n>conn</span> <span class=o>=</span> <span class=p>(</span><span class=k>struct</span> <span class=nc>Conn</span> <span class=o>*</span><span class=p>)</span><span class=n>malloc</span><span class=p>(</span><span class=k>sizeof</span><span class=p>(</span><span class=k>struct</span> <span class=nc>Conn</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=n>conn</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>close</span><span class=p>(</span><span class=n>connfd</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=o>-</span><span class=mi>1</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=n>conn</span><span class=o>-&gt;</span><span class=n>fd</span> <span class=o>=</span> <span class=n>connfd</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o>=</span> <span class=n>STATE_REQ</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_size</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_sent</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>conn_put</span><span class=p>(</span><span class=n>fd2conn</span><span class=p>,</span> <span class=n>conn</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li>클라이언트 연결 상태 체크(state machine)를 위한 <code>connection_io()</code></li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>static</span> <span class=kt>void</span> <span class=nf>connection_io</span><span class=p>(</span><span class=n>Conn</span> <span class=o>*</span><span class=n>conn</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o><mark></span> <span class=n>STATE_REQ</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>state_req</span><span class=p>(</span><span class=n>conn</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span> <span class=k>else</span> <span class=k>if</span> <span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o></mark></span> <span class=n>STATE_RES</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>state_res</span><span class=p>(</span><span class=n>conn</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span> <span class=k>else</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>assert</span><span class=p>(</span><span class=mi>0</span><span class=p>);</span>  <span class=c1>// not expected
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=p>}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li><code>STATE_REQ</code> 는 읽기 상태</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>static</span> <span class=kt>void</span> <span class=nf>state_req</span><span class=p>(</span><span class=n>Conn</span> <span class=o>*</span><span class=n>conn</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>while</span> <span class=p>(</span><span class=n>try_fill_buffer</span><span class=p>(</span><span class=n>conn</span><span class=p>))</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>static</span> <span class=kt>bool</span> <span class=nf>try_fill_buffer</span><span class=p>(</span><span class=n>Conn</span> <span class=o>*</span><span class=n>conn</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// try to fill the buffer
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>assert</span><span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span> <span class=o>&lt;</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf</span><span class=p>));</span>
+</span></span><span class=line><span class=cl>    <span class=n>ssize_t</span> <span class=n>rv</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>do</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>size_t</span> <span class=n>cap</span> <span class=o>=</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf</span><span class=p>)</span> <span class=o>-</span> <span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=n>rv</span> <span class=o>=</span> <span class=n>read</span><span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>fd</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf</span><span class=p>[</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span><span class=p>],</span> <span class=n>cap</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span> <span class=k>while</span> <span class=p>(</span><span class=n>rv</span> <span class=o>&lt;</span> <span class=mi>0</span> <span class=o>&amp;&amp;</span> <span class=n>errno</span> <span class=o><mark></span> <span class=n>EINTR</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>rv</span> <span class=o>&lt;</span> <span class=mi>0</span> <span class=o>&amp;&amp;</span> <span class=n>errno</span> <span class=o></mark></span> <span class=n>EAGAIN</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=c1>// got EAGAIN, stop.
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=k>return</span> <span class=nb>false</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>rv</span> <span class=o>&lt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>msg</span><span class=p>(</span><span class=s>&#34;read() error&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o>=</span> <span class=n>STATE_END</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=nb>false</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>rv</span> <span class=o><mark></span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=k>if</span> <span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span> <span class=o>&gt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=n>msg</span><span class=p>(</span><span class=s>&#34;unexpected EOF&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span> <span class=k>else</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>            <span class=n>msg</span><span class=p>(</span><span class=s>&#34;EOF&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=p>}</span>
+</span></span><span class=line><span class=cl>        <span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o>=</span> <span class=n>STATE_END</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=nb>false</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span> <span class=o>+=</span> <span class=p>(</span><span class=n>size_t</span><span class=p>)</span><span class=n>rv</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>assert</span><span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span> <span class=o>&lt;=</span> <span class=k>sizeof</span><span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf</span><span class=p>)</span> <span class=o>-</span> <span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// Try to process requests one by one.
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=c1>// Why is there a loop? Please read the explanation of &#34;pipelining&#34;.
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>while</span> <span class=p>(</span><span class=n>try_one_request</span><span class=p>(</span><span class=n>conn</span><span class=p>))</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl>    <span class=k>return</span> <span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o></mark></span> <span class=n>STATE_REQ</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><ul><li><code>try_fill_buffer</code> : read buffer를 데이터로 채워주는 함수<ul><li>read buffer가 제한적이기 때문에 만약 꽉 차게 되면 그 전에 <code>EAGAIN</code> 에러를 발생시킨다.</li><li>따라서, 읽기 후 read buffer를 처리하고 <code>EAGAIN</code> 발생 전까지 룹을 돈다.</li></ul></li><li><code>read</code> syscall은 <code>EINTR</code> 에러 후에 리트라이 해주어야 한다.<ul><li><code>EINTR</code>은 syscall이 중단 되었다는 뜻으로, 어플리케이션과 상관 없이 재시도를 해주어야 한다.</li></ul></li><li><code>try_fill_buffer</code> 에서 loop을 도는 이유<ul><li>요청/응답 프로토콜에서 클라이언트가 요청 보내놓고 계속 기다리는 것이 아니라 계속 필요한 요청을 계속 보낼 수 있으면 시간을 더 절약할 수 있음. -> &ldquo;pipelining&rdquo;</li><li>따라서, read buffer에 하나의 요청만 포함된다 라고 할 수 없음. 하나의 read buffer에는 여러 요청이 있을 수 있음.</li></ul></li><li><code>try_one_request</code> 에서 read buffer에 있는 요청 하나씩을 꺼내와 응답을 만들고 <code>STATE_RES</code> 상태값으로 변경한다.</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>static</span> <span class=kt>bool</span> <span class=nf>try_one_request</span><span class=p>(</span><span class=n>Conn</span> <span class=o>*</span><span class=n>conn</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// try to parse a request from the buffer
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>if</span> <span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span> <span class=o>&lt;</span> <span class=mi>4</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=c1>// not enough data in the buffer. Will retry in the next iteration
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=k>return</span> <span class=nb>false</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=kt>uint32_t</span> <span class=n>len</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>memcpy</span><span class=p>(</span><span class=o>&amp;</span><span class=n>len</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf</span><span class=p>[</span><span class=mi>0</span><span class=p>],</span> <span class=mi>4</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>len</span> <span class=o>&gt;</span> <span class=n>k_max_msg</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>msg</span><span class=p>(</span><span class=s>&#34;too long&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o>=</span> <span class=n>STATE_END</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=nb>false</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=mi>4</span> <span class=o>+</span> <span class=n>len</span> <span class=o>&gt;</span> <span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=c1>// not enough data in the buffer. Will retry in the next iteration
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=k>return</span> <span class=nb>false</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// got one request, do something with it
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>printf</span><span class=p>(</span><span class=s>&#34;client says: %.*s</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span> <span class=n>len</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf</span><span class=p>[</span><span class=mi>4</span><span class=p>]);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// generating echoing response
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>memcpy</span><span class=p>(</span><span class=o>&amp;</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf</span><span class=p>[</span><span class=mi>0</span><span class=p>],</span> <span class=o>&amp;</span><span class=n>len</span><span class=p>,</span> <span class=mi>4</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>memcpy</span><span class=p>(</span><span class=o>&amp;</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf</span><span class=p>[</span><span class=mi>4</span><span class=p>],</span> <span class=o>&amp;</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf</span><span class=p>[</span><span class=mi>4</span><span class=p>],</span> <span class=n>len</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_size</span> <span class=o>=</span> <span class=mi>4</span> <span class=o>+</span> <span class=n>len</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// remove the request from the buffer.
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=c1>// note: frequent memmove is inefficient.
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=c1>// note: need better handling for production code.
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>size_t</span> <span class=n>remain</span> <span class=o>=</span> <span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span> <span class=o>-</span> <span class=mi>4</span> <span class=o>-</span> <span class=n>len</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>remain</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>memmove</span><span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf</span><span class=p>[</span><span class=mi>4</span> <span class=o>+</span> <span class=n>len</span><span class=p>],</span> <span class=n>remain</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=n>conn</span><span class=o>-&gt;</span><span class=n>rbuf_size</span> <span class=o>=</span> <span class=n>remain</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// change state
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o>=</span> <span class=n>STATE_RES</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>state_res</span><span class=p>(</span><span class=n>conn</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=c1>// continue the outer loop if the request was fully processed
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>return</span> <span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o>==</span> <span class=n>STATE_REQ</span><span class=p>);</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><p>변경된 conn을 받는 <code>state_res</code> 는 아래와 같다.</p><ul><li><code>EAGAIN</code> 이 될때까지 계속 write buffer를 flush 하고, flush가 완료되면 state를 <code>STATE_REQ</code>로 바꿔준다.</li></ul><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-cpp data-lang=cpp><span class=line><span class=cl><span class=k>static</span> <span class=kt>void</span> <span class=nf>state_res</span><span class=p>(</span><span class=n>Conn</span> <span class=o>*</span><span class=n>conn</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=k>while</span> <span class=p>(</span><span class=n>try_flush_buffer</span><span class=p>(</span><span class=n>conn</span><span class=p>))</span> <span class=p>{}</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=k>static</span> <span class=kt>bool</span> <span class=nf>try_flush_buffer</span><span class=p>(</span><span class=n>Conn</span> <span class=o>*</span><span class=n>conn</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>    <span class=n>ssize_t</span> <span class=n>rv</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=k>do</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>size_t</span> <span class=n>remain</span> <span class=o>=</span> <span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_size</span> <span class=o>-</span> <span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_sent</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=n>rv</span> <span class=o>=</span> <span class=n>write</span><span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>fd</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf</span><span class=p>[</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_sent</span><span class=p>],</span> <span class=n>remain</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span> <span class=k>while</span> <span class=p>(</span><span class=n>rv</span> <span class=o>&lt;</span> <span class=mi>0</span> <span class=o>&amp;&amp;</span> <span class=n>errno</span> <span class=o><mark></span> <span class=n>EINTR</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>rv</span> <span class=o>&lt;</span> <span class=mi>0</span> <span class=o>&amp;&amp;</span> <span class=n>errno</span> <span class=o></mark></span> <span class=n>EAGAIN</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=c1>// EAGAIN 이 되면 멈춘다.
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=k>return</span> <span class=nb>false</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>rv</span> <span class=o>&lt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=n>msg</span><span class=p>(</span><span class=s>&#34;write() error&#34;</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>        <span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o>=</span> <span class=n>STATE_END</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=nb>false</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_sent</span> <span class=o>+=</span> <span class=p>(</span><span class=n>size_t</span><span class=p>)</span><span class=n>rv</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=n>assert</span><span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_sent</span> <span class=o>&lt;=</span> <span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_size</span><span class=p>);</span>
+</span></span><span class=line><span class=cl>    <span class=k>if</span> <span class=p>(</span><span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_sent</span> <span class=o>==</span> <span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_size</span><span class=p>)</span> <span class=p>{</span>
+</span></span><span class=line><span class=cl>        <span class=c1>// response가 모두 보내지면, STATE_REQ로 다시 state를 바꾸어 준다.
+</span></span></span><span class=line><span class=cl><span class=c1></span>        <span class=n>conn</span><span class=o>-&gt;</span><span class=n>state</span> <span class=o>=</span> <span class=n>STATE_REQ</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_sent</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=n>conn</span><span class=o>-&gt;</span><span class=n>wbuf_size</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>        <span class=k>return</span> <span class=nb>false</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>    <span class=p>}</span>
+</span></span><span class=line><span class=cl>    <span class=c1>// 아직 write buffer(wbuf)에 데이터가 남아있다면 다시 쓰기를 시도한다.
+</span></span></span><span class=line><span class=cl><span class=c1></span>    <span class=k>return</span> <span class=nb>true</span><span class=p>;</span>
+</span></span><span class=line><span class=cl><span class=p>}</span>
+</span></span></code></pre></td></tr></table></div></div><blockquote><p>코드 :
+<a href=https://github.com/jiyeonseo/build-your-own-redis-with-c-cpp/tree/main/06 rel=noopener>https://github.com/jiyeonseo/build-your-own-redis-with-c-cpp/tree/main/06</a></p></blockquote></article><div><script src=https://utteranc.es/client.js repo=jiyeonseo/digital-garden issue-term=pathname theme=github-light crossorigin=anonymous async></script></div><hr><div class=page-end id=footer><div class=backlinks-container><h3>Backlinks</h3><ul class=backlinks><li><a href=/digital-garden/notes/build-your-own-redis-with-c-cpp-1/ data-ctx="notes/build your own redis with c cpp 2" data-src=/notes/build-your-own-redis-with-c-cpp-1 class=internal-link>(Build Your Own Redis with C/C++) 1. socket 통신, Protocol Parsing</a></li></ul></div><div><script src=https://cdn.jsdelivr.net/npm/d3@6.7.0/dist/d3.min.js integrity="sha256-+7jaYCp29O1JusNWHaYtgUn6EhuP0VaFuswhNV06MyI=" crossorigin=anonymous></script><h3>Interactive Graph</h3><div id=graph-container></div><style>:root{--g-node:var(--secondary);--g-node-active:var(--primary);--g-node-inactive:var(--visited);--g-link:var(--outlinegray);--g-link-active:#5a7282}</style><script src=https://jiyeonseo.github.io/digital-garden/js/graph.abd4bc2af3869a96524d7d23b76152c7.js></script></div></div><div id=contact_buttons><footer><p>Made by Jiyeon Seo using <a href=https://github.com/jackyzha0/quartz>Quartz</a>, © 2023</p><ul><li><a href=https://jiyeonseo.github.io/digital-garden/>Home</a></li><li><a href=https://jiyeonseo.github.io>Blog</a></li><li><a href=https://twitter.com/seojeee>Twitter</a></li><li><a href=https://github.com/jiyeonseo>Github</a></li></ul></footer></div></div></body></html>
