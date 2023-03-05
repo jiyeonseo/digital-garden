@@ -127,6 +127,12 @@ dist/
 - 최신 pip는 `.whl` 로 우선적으로 설치되지만, 호환이 안되는 경우 `.tar.gz`으로 
 
 ## 패키지 업로드하기 
+- 테스트 업로드를 하기 위해 TestPyPI 계정 만들기 
+	- https://test.pypi.org/account/register/ (email verification 반드시 필요)
+	- 더 자세한 사항은 [Using TestPyPI](https://packaging.python.org/en/latest/guides/using-testpypi/) 를 참고
+	- 업로드를 위해서 [API Token](https://test.pypi.org/help/#apitoken) 을 사용하는데 API token은  [TestPyPI account](https://test.pypi.org/manage/account/#api-tokens) 에서 생성할 수 있다. 
+
+업로드 하기 위하여 [twine](https://packaging.python.org/en/latest/key_projects/#twine) 을 먼저 설치
 ```
 # Unix/macOS
 python3 -m pip install --upgrade twine
@@ -135,6 +141,7 @@ python3 -m pip install --upgrade twine
 py -m pip install --upgrade twine
 ```
 
+twine 이용하여 아래와 같이 업로드 할 수 있다. 
 ```
 # Unix/macOS
 python3 -m twine upload --repository testpypi dist/*
@@ -142,6 +149,24 @@ python3 -m twine upload --repository testpypi dist/*
 # Windows
 py -m twine upload --repository testpypi dist/*
 ```
+
+이 과정에서 username과 password를 입력하도록 되어있는데, 
+- username :  `__token__` 
+- password : 위에서 발급받은 API Token(`pypi-blahblah`)을 입력 
+위 업로드가 성공하면 `https://test.pypi.org/project/example_package_YOUR_USERNAME_HERE`. 에서 올라간 패키지를 확인할 수 있다. 
+> 예시 : https://test.pypi.org/project/cheese-package/0.1.0/
+
+## 패키지 설치하기 
+```
+# Unix/macOS
+python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps example-package-YOUR-USERNAME-HERE
+
+# Windows
+py -m pip install --index-url https://test.pypi.org/simple/ --no-deps example-package-YOUR-USERNAME-HERE
+```
+- `--index--url`
+- `--no-deps`
+
 
 ## References 
 - [Packaging Python Projects](https://packaging.python.org/en/latest/tutorials/packaging-projects/)
