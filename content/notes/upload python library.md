@@ -142,5 +142,7 @@ python3 -m twine upload --repository testpypi dist/*
 # Windows
 py -m twine upload --repository testpypi dist/*
 ```
+
 ## References 
 - [Packaging Python Projects](https://packaging.python.org/en/latest/tutorials/packaging-projects/)
+- [circleci blog - Publishing a Python package](https://circleci.com/blog/publishing-a-python-package/?utm_source=google&utm_medium=sem&utm_campaign=sem-google-dg--japac-en-dsa-tROAS-auth-brand&utm_term=g_-_c__dsa_&utm_content=&gclid=Cj0KCQiA9YugBhCZARIsAACXxeJChlMZzUeuiklpIknQj03iGqmlmwy4dj2MJIZ0xvahOHsyn1TB0wUaApS3EALw_wcB)
