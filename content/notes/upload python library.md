@@ -164,9 +164,20 @@ python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps examp
 # Windows
 py -m pip install --index-url https://test.pypi.org/simple/ --no-deps example-package-YOUR-USERNAME-HERE
 ```
-- `--index--url`
-- `--no-deps`
+- `--index-url` :  라이브 되고 있는 PyPI 라이브러리가 아닌 TestPyPI의 라이브러리를 설치시 사용
+- `--no-deps` : 만약 동일한 이름의 라이브러리가 라이브 PyPI에 있는 경우, dependency 설치에 실패하거나 예상치 못한 다른 dependecy가 깔릴 수 있으므로. 
 
+```py
+from example_package_YOUR_USERNAME_HERE import example
+
+example.add_one(2)
+```
+
+## pypi.org 에 업로드하기 
+
+- [https://pypi.org] 계정만들기
+- `twine upload dist/*` 로 업로드하기 (이때, 라이브 PyPI로 올리는거니 `--repository` 따로 명시 필요 없음) 
+- 패키지 설치시에는 `python -m pip install [your-package]` 로 설치
 
 ## References 
 - [Packaging Python Projects](https://packaging.python.org/en/latest/tutorials/packaging-projects/)
