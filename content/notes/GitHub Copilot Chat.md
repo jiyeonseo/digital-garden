@@ -16,7 +16,7 @@ GitHub은 역시 코드로 승부하나보다. VSCode Plugin으로 GitHub Copilo
 ![](https://github.com/jiyeonseo/digital-garden/assets/2231510/4b32a475-73ed-47d4-b28b-c0232fd793fc)
 
 
-## 2. `/fix` 
+### 2. `/fix` 
 - IDE에서 기본적으로 제공하는 fix는 pre defined 된 문장으로 내가 작업하고 있는 맥락과 맞지 않거나 이해하기 어려운 경우가 종종 있었음. 
 - 코파일럿 챗에서는 내 코드의 맥락을 파악하여 설명해주어 더 이해하기 좋았다. 
 - 코드에서 바로 대화가 가능하기도 하고. 
