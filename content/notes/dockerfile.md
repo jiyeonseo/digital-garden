@@ -103,7 +103,7 @@ CMD ["myapp"]
 	- 예 ) `RUN yum -disablerepo=*, -enablerepo="myrepo" && yum update -y && yum install nmap` 
 		- 가독성을 위해 뒤에 `&&\` 으로 다음 줄로 넘어갈 수도 있음 
 
-### `ONBUILD`
+### `ONBUILD` 명령어
 - 부모 도커파일이 자식 도커파일에게 제공되는 명령어 
 	- 하위 도커 파일의 모든 명령보다 먼저 `ONBUILD`가 먼저 실행됨 
 - 부모 도커 파일을 기본 이미지로 사용하는 자식 도커파일에서 반드시 진행되어야 하는 파일 복사나, 환경 변수 설정과 같은 작업을 자동화 할 수 있다. 
@@ -186,7 +186,7 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
-### Dockerfile 빌드는 사실 그냥 tar 파일 만드는 것 
+### Dockerfile 빌드는 사실 그냥 tar 파일
 - Docker 이미지는 사실 `tar` 파일임. 즉, 파일과 디렉토리의 압축된 아카이브 파일일 뿐인거임. 
 - 이미지 빌드는 사용자가 지정한 모든 파일과 디렉토리를 가져와서 하나의 tar로 압축한 후 메타데이터를 추가 하는 것 뿐임. 
 
